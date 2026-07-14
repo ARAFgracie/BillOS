@@ -254,7 +254,7 @@
       return;
     }
     showMsg(msg, 'Logged in! Redirecting...', 'success');
-    // TODO: redirect to dashboard, e.g. window.location.href = '/dashboard.html';
+    setTimeout(() => { window.location.href = 'dashboard.html'; }, 700);
   });
 
   // ---- Signup ----
@@ -311,10 +311,9 @@
     }
 
     showMsg(msg, 'Shop created! You are the Owner. Redirecting...', 'success');
-    // TODO: redirect to dashboard, e.g. window.location.href = '/dashboard.html';
+    setTimeout(() => { window.location.href = 'dashboard.html'; }, 700);
   });
 </script>
 
 </body>
 </html>
-
