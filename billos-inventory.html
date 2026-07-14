@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BillOS — Inventory</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root{
+    --blue:#3B5FE2; --blue-dark:#2E4BC4;
+    --bg-top:#E9ECF8; --bg-bottom:#DDE2F2;
+    --ink:#1A1D29; --muted:#6B7280;
+    --card:#FFFFFF; --border:#E5E7F0;
+    --green:#16A34A; --red:#DC2626;
+    --amber-bg:#FCEBC5; --amber-text:#B7791F;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh;
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background:linear-gradient(160deg, var(--bg-top), var(--bg-bottom));
+    color:var(--ink);
+  }
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 20px; background:#fff; border-bottom:1px solid var(--border);
+  }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .logo{
+    width:40px; height:40px; background:var(--blue); border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-weight:800; font-size:18px;
+  }
+  .brand-name{ font-size:19px; font-weight:800; }
+  .back-link{ font-size:13px; color:var(--blue); font-weight:700; text-decoration:none; }
+
+  .content{ padding:20px; max-width:600px; margin:0 auto; }
+  .head-row{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+  .head-row h1{ font-size:22px; margin:0; }
+  .add-btn{
+    background:var(--blue); color:#fff; border:none; border-radius:12px;
+    padding:10px 18px; font-weight:700; font-size:13px; cursor:pointer;
+  }
+
+  .stats{ display:flex; gap:10px; margin-bottom:18px; }
+  .stat{
+    flex:1; background:#fff; border:1px solid var(--border); border-radius:14px;
+    padding:14px; text-align:center;
+  }
+  .stat .num{ font-size:22px; font-weight:800; }
+  .stat .label{ font-size:11px; color:var(--muted); margin-top:2px; }
+
+  .search{
+    width:100%; padding:13px 16px; margin-bottom:16px;
+    border-radius:14px; border:1px solid var(--border);
+    background:#fff; font-size:14px; outline:none;
+  }
+  .search:focus{ border-color:var(--blue); }
+
+  .product-row{
+    display:flex; align-items:center; justify-content:space-between;
+    background:#fff; border:1px solid var(--border); border-radius:14px;
+    padding:14px 16px; margin-bottom:10px;
+  }
+  .p-name{ font-weight:700; font-size:14px; }
+  .p-meta{ font-size:12px; color:var(--muted); margin-top:2px; }
+  .badge{
+    display:inline-block; background:var(--amber-bg); color:var(--amber-text);
+    font-size:10px; font-weight:800; padding:2px 7px; border-radius:20px; margin-left:6px;
+  }
+  .row-actions{ display:flex; gap:8px; }
+  .icon-btn{
+    width:34px; height:34px; border-radius:10px; border:1px solid var(--border);
+    background:#F8F9FD; cursor:pointer; font-size:14px;
+  }
+  .icon-btn.danger{ background:#FEECEC; color:var(--red); border-color:#FBD5D5; }
+
+  .empty-card{
+    background:#fff; border:1px solid var(--border); border-radius:16px;
+    padding:24px; text-align:center; color:var(--muted); font-size:13px;
+  }
+
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(26,29,41,0.5);
+    display:none; align-items:flex-end; justify-content:center; z-index:10;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal{
+    background:#fff; border-radius:20px 20px 0 0; padding:24px 20px 28px;
+    width:100%; max-width:600px; max-height:85vh; overflow-y:auto;
+  }
+  .modal h3{ margin:0 0 16px; }
+  label{ display:block; font-size:12px; font-weight:700; color:var(--muted); margin-bottom:6px; text-transform:uppercase; }
+  input, select{
+    width:100%; padding:12px 14px; margin-bottom:14px; border-radius:12px;
+    border:1px solid var(--border); background:#F8F9FD; font-size:14px; outline:none;
+  }
+  input:focus, select:focus{ border-color:var(--blue); }
+  .checkbox-row{ display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+  .checkbox-row input{ width:auto; margin:0; }
+  .save-btn{
+    width:100%; padding:14px 0; border:none; border-radius:14px;
+    background:var(--blue); color:#fff; font-weight:800; font-size:15px; cursor:pointer;
+  }
+  .cancel-link{ display:block; text-align:center; margin-top:12px; color:var(--muted); font-size:13px; }
+  .msg{ margin-top:12px; font-size:13px; padding:10px; border-radius:10px; display:none; }
+  .msg.error{ display:block; background:#FEECEC; color:var(--red); }
+  .msg.success{ display:block; background:#E7F8EE; color:var(--green); }
+
+  .loading{ text-align:center; padding:60px 20px; color:var(--muted); }
+  .no-access{ text-align:center; padding:60px 20px; color:var(--muted); }
+</style>
+</head>
+<body>
+
+<div id="loading" class="loading">Loading BillOS...</div>
+
+<div id="app" style="display:none;">
+  <div class="topbar">
+    <div class="brand">
+      <div class="logo">B</div>
+      <div class="brand-name">BillOS</div>
+    </div>
+    <a href="dashboard.html" class="back-link">← Dashboard</a>
+  </div>
+
+  <div class="content">
+    <div class="head-row">
+      <h1>Inventory</h1>
+      <button class="add-btn" id="open-add-btn">+ Add</button>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="num" id="stat-total">0</div><div class="label">Total</div></div>
+      <div class="stat"><div class="num" id="stat-low" style="color:var(--amber-text)">0</div><div class="label">Low Stock</div></div>
+      <div class="stat"><div class="num" id="stat-out" style="color:var(--red)">0</div><div class="label">Out of Stock</div></div>
+    </div>
+
+    <input type="text" class="search" id="search" placeholder="Search products...">
+    <div id="product-list"></div>
+  </div>
+</div>
+
+<div id="no-access" class="no-access" style="display:none;">Only Owners and Authority can manage inventory.</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h3 id="modal-title">Add Product</h3>
+    <form id="product-form">
+      <input type="hidden" id="product-id">
+      <label for="f-name">Name</label>
+      <input type="text" id="f-name" required>
+      <label for="f-price">Price (৳)</label>
+      <input type="number" id="f-price" step="0.01" required>
+      <label for="f-unit">Unit</label>
+      <select id="f-unit">
+        <option value="pcs">pcs</option>
+        <option value="kg">kg</option>
+        <option value="g">g</option>
+      </select>
+      <div class="checkbox-row">
+        <input type="checkbox" id="f-weighted">
+        <label for="f-weighted" style="margin:0; text-transform:none; font-weight:600;">This is a weighted item</label>
+      </div>
+      <label for="f-stock">Stock Quantity</label>
+      <input type="number" id="f-stock" step="0.01" required>
+      <button type="submit" class="save-btn" id="save-btn">Save Product</button>
+      <div class="msg" id="form-msg"></div>
+      <a href="#" class="cancel-link" id="close-modal">Cancel</a>
+    </form>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = "https://ektdcnvraluuwxmqhjvj.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_yTDG8ujXgVE81BNAvPvZlw_tlbfKNTm";
+  const { createClient } = supabase;
+  const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let profile = null;
+  let products = [];
+
+  async function init() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { window.location.href = 'login.html'; return; }
+
+    const { data: p, error } = await sb
+      .from('profiles')
+      .select('id, full_name, role, shop_id')
+      .eq('id', session.user.id)
+      .single();
+
+    if (error || !p) {
+      document.getElementById('loading').textContent = 'Could not load your profile.';
+      return;
+    }
+    profile = p;
+
+    if (profile.role === 'sales_executive') {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('no-access').style.display = 'block';
+      return;
+    }
+
+    await loadProducts();
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+  }
+
+  async function loadProducts() {
+    const { data } = await sb
+      .from('products')
+      .select('*')
+      .eq('shop_id', profile.shop_id)
+      .order('name');
+    products = data || [];
+    renderStats();
+    renderProducts(products);
+  }
+
+  function renderStats() {
+    document.getElementById('stat-total').textContent = products.length;
+    document.getElementById('stat-low').textContent = products.filter(p => p.stock_quantity > 0 && p.stock_quantity <= 5).length;
+    document.getElementById('stat-out').textContent = products.filter(p => p.stock_quantity <= 0).length;
+  }
+
+  function renderProducts(list) {
+    const container = document.getElementById('product-list');
+    if (!list.length) {
+      container.innerHTML = '<div class="empty-card">No products yet. Tap "+ Add" to create your first one.</div>';
+      return;
+    }
+    container.innerHTML = list.map(p => {
+      let badge = '';
+      if (p.stock_quantity <= 0) badge = '<span class="badge" style="background:#FEECEC;color:#DC2626;">OUT</span>';
+      else if (p.stock_quantity <= 5) badge = '<span class="badge">LOW</span>';
+      return `
+        <div class="product-row">
+          <div>
+            <div class="p-name">${p.name}${badge}</div>
+            <div class="p-meta">৳${p.price}/${p.unit} · ${p.stock_quantity} ${p.unit} in stock</div>
+          </div>
+          <div class="row-actions">
+            <button class="icon-btn" onclick="openEdit('${p.id}')">✎</button>
+            <button class="icon-btn danger" onclick="deleteProduct('${p.id}')">🗑</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  document.getElementById('search').addEventListener('input', (e) => {
+    const q = e.target.value.toLowerCase();
+    renderProducts(products.filter(p => p.name.toLowerCase().includes(q)));
+  });
+
+  // Modal controls
+  const overlay = document.getElementById('modal-overlay');
+  document.getElementById('open-add-btn').addEventListener('click', () => openAdd());
+  document.getElementById('close-modal').addEventListener('click', (e) => { e.preventDefault(); overlay.classList.remove('open'); });
+
+  function openAdd() {
+    document.getElementById('modal-title').textContent = 'Add Product';
+    document.getElementById('product-form').reset();
+    document.getElementById('product-id').value = '';
+    document.getElementById('form-msg').className = 'msg';
+    overlay.classList.add('open');
+  }
+
+  window.openEdit = function(id) {
+    const p = products.find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('modal-title').textContent = 'Edit Product';
+    document.getElementById('product-id').value = p.id;
+    document.getElementById('f-name').value = p.name;
+    document.getElementById('f-price').value = p.price;
+    document.getElementById('f-unit').value = p.unit;
+    document.getElementById('f-weighted').checked = p.is_weighted;
+    document.getElementById('f-stock').value = p.stock_quantity;
+    document.getElementById('form-msg').className = 'msg';
+    overlay.classList.add('open');
+  };
+
+  window.deleteProduct = async function(id) {
+    if (!confirm('Delete this product?')) return;
+    const { error } = await sb.from('products').delete().eq('id', id);
+    if (error) { alert('Failed to delete: ' + error.message); return; }
+    await loadProducts();
+  };
+
+  document.getElementById('product-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('save-btn');
+    const msg = document.getElementById('form-msg');
+    btn.disabled = true; btn.textContent = 'Saving...';
+
+    const id = document.getElementById('product-id').value;
+    const payload = {
+      name: document.getElementById('f-name').value,
+      price: parseFloat(document.getElementById('f-price').value),
+      unit: document.getElementById('f-unit').value,
+      is_weighted: document.getElementById('f-weighted').checked,
+      stock_quantity: parseFloat(document.getElementById('f-stock').value),
+      shop_id: profile.shop_id
+    };
+
+    let result;
+    if (id) {
+      result = await sb.from('products').update(payload).eq('id', id);
+    } else {
+      result = await sb.from('products').insert(payload);
+    }
+
+    btn.disabled = false; btn.textContent = 'Save Product';
+
+    if (result.error) {
+      msg.textContent = 'Failed: ' + result.error.message;
+      msg.className = 'msg error';
+      return;
+    }
+
+    msg.textContent = 'Saved!';
+    msg.className = 'msg success';
+    await loadProducts();
+    setTimeout(() => { overlay.classList.remove('open'); }, 600);
+  });
+
+  init();
+</script>
+
+</body>
+</html>
