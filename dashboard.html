@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BillOS — Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root{
+    --blue:#3B5FE2;
+    --blue-dark:#2E4BC4;
+    --bg-top:#E9ECF8;
+    --bg-bottom:#DDE2F2;
+    --ink:#1A1D29;
+    --muted:#6B7280;
+    --card:#FFFFFF;
+    --border:#E5E7F0;
+    --green:#16A34A;
+    --amber-bg:#FCEBC5;
+    --amber-text:#B7791F;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background:linear-gradient(160deg, var(--bg-top), var(--bg-bottom));
+    color:var(--ink);
+    padding-bottom:84px;
+  }
+
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:16px 20px;
+    background:#fff;
+    border-bottom:1px solid var(--border);
+  }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .logo{
+    width:40px; height:40px;
+    background:var(--blue);
+    border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-weight:800; font-size:18px;
+  }
+  .brand-name{ font-size:19px; font-weight:800; }
+  .role-pill{
+    background:#F3F4FA;
+    border:1px solid var(--border);
+    border-radius:20px;
+    padding:8px 16px;
+    font-size:13px;
+    font-weight:700;
+    color:var(--ink);
+    text-transform:capitalize;
+  }
+
+  .content{ padding:24px 20px; max-width:600px; margin:0 auto; }
+  .content h1{ font-size:24px; margin:0 0 4px; }
+  .content .shopname{ font-size:13px; color:var(--muted); margin-bottom:22px; }
+
+  .panel{ display:none; }
+  .panel.active{ display:block; }
+
+  .card{
+    background:var(--card);
+    border-radius:16px;
+    padding:20px;
+    border:1px solid var(--border);
+    box-shadow:0 4px 16px rgba(59,95,226,0.06);
+    margin-bottom:14px;
+  }
+  .empty-icon{ font-size:32px; margin-bottom:8px; }
+  .empty-title{ font-weight:800; font-size:15px; margin-bottom:4px; }
+  .empty-sub{ font-size:13px; color:var(--muted); }
+
+  .bottom-nav{
+    position:fixed;
+    bottom:0; left:0; right:0;
+    background:#fff;
+    border-top:1px solid var(--border);
+    display:flex;
+    padding:8px 4px;
+  }
+  .nav-item{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    padding:8px 0;
+    border-radius:12px;
+    color:var(--muted);
+    font-size:11px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .nav-item.active{
+    color:var(--blue);
+    background:#EEF1FC;
+  }
+  .nav-item .icon{ font-size:20px; }
+  .nav-item.hidden{ display:none; }
+
+  .loading{
+    text-align:center;
+    padding:60px 20px;
+    color:var(--muted);
+  }
+
+  .bill-card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:16px;
+    margin-bottom:10px;
+  }
+  .bill-top{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .bill-id{ font-size:12px; color:var(--muted); font-weight:700; }
+  .status-badge{
+    background:#DCFCE7; color:var(--green);
+    font-size:11px; font-weight:800; padding:3px 10px; border-radius:20px;
+    text-transform:capitalize;
+  }
+  .bill-amount{ font-size:22px; font-weight:800; margin-bottom:6px; }
+  .bill-meta{ font-size:12px; color:var(--muted); display:flex; gap:14px; }
+</style>
+</head>
+<body>
+
+<div id="loading" class="loading">Loading BillOS...</div>
+
+<div id="app" style="display:none;">
+  <div class="topbar">
+    <div class="brand">
+      <div class="logo">B</div>
+      <div class="brand-name">BillOS</div>
+    </div>
+    <div class="role-pill" id="role-pill">—</div>
+  </div>
+
+  <div class="content">
+    <h1 id="greeting">Welcome</h1>
+    <div class="shopname" id="shop-name"></div>
+
+    <div class="panel active" id="panel-billing">
+      <div class="card">
+        <div class="empty-icon">🛒</div>
+        <div class="empty-title">New Bill</div>
+        <div class="empty-sub">Tap products to add, or scan a barcode.</div>
+        <a href="billing.html" style="display:inline-block;margin-top:12px;background:var(--blue);color:#fff;padding:10px 20px;border-radius:12px;font-weight:700;font-size:13px;text-decoration:none;">Start Billing →</a>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-inventory">
+      <div class="card">
+        <div class="empty-icon">📦</div>
+        <div class="empty-title">Inventory</div>
+        <div class="empty-sub">Add, edit, and track your product stock.</div>
+        <a href="inventory.html" style="display:inline-block;margin-top:12px;background:var(--blue);color:#fff;padding:10px 20px;border-radius:12px;font-weight:700;font-size:13px;text-decoration:none;">Manage Inventory →</a>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-bills">
+      <div id="bills-list">
+        <div class="card">
+          <div class="empty-icon">🧾</div>
+          <div class="empty-title">Recent Bills</div>
+          <div class="empty-sub">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-analytics">
+      <div class="card">
+        <div class="empty-icon">📊</div>
+        <div class="empty-title">Product Analytics</div>
+        <div class="empty-sub">Analytics will appear once you have sales data.</div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-reports">
+      <div class="card">
+        <div class="empty-icon">📈</div>
+        <div class="empty-title">Sales Report</div>
+        <div class="empty-sub">Reports will appear once you have sales data.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-item active" data-panel="billing">
+      <div class="icon">🛒</div>Billing
+    </div>
+    <div class="nav-item" data-panel="inventory">
+      <div class="icon">📦</div>Inventory
+    </div>
+    <div class="nav-item" data-panel="bills">
+      <div class="icon">🧾</div>Bills
+    </div>
+    <div class="nav-item" data-panel="analytics" id="nav-analytics">
+      <div class="icon">📊</div>Analytics
+    </div>
+    <div class="nav-item" data-panel="reports" id="nav-reports">
+      <div class="icon">📈</div>Reports
+    </div>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = "https://ektdcnvraluuwxmqhjvj.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_yTDG8ujXgVE81BNAvPvZlw_tlbfKNTm";
+  const { createClient } = supabase;
+  const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let profile = null;
+  let billsLoaded = false;
+
+  async function init() {
+    const { data: { session } } = await sb.auth.getSession();
+
+    if (!session) {
+      window.location.href = 'login.html';
+      return;
+    }
+
+    // Fetch profile + shop
+    const { data: p, error } = await sb
+      .from('profiles')
+      .select('full_name, role, shop_id, shops(name)')
+      .eq('id', session.user.id)
+      .single();
+
+    if (error || !p) {
+      document.getElementById('loading').textContent = 'DEBUG ERROR: ' + (error ? JSON.stringify(error) : 'no profile returned') + ' | session user id: ' + session.user.id;
+      return;
+    }
+    profile = p;
+
+    document.getElementById('greeting').textContent = 'Welcome, ' + (profile.full_name || 'there');
+    document.getElementById('shop-name').textContent = profile.shops?.name || '';
+    document.getElementById('role-pill').textContent = profile.role.replace('_', ' ');
+
+    // Role-based nav: Sales Executive doesn't see Analytics / Reports
+    if (profile.role === 'sales_executive') {
+      document.getElementById('nav-analytics').classList.add('hidden');
+      document.getElementById('nav-reports').classList.add('hidden');
+    }
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+  }
+
+  async function loadBills() {
+    const container = document.getElementById('bills-list');
+    const { data, error } = await sb
+      .from('invoices')
+      .select('id, total_amount, payment_method, created_at')
+      .eq('shop_id', profile.shop_id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (error) {
+      container.innerHTML = '<div class="card"><div class="empty-sub">Could not load bills.</div></div>';
+      return;
+    }
+
+    if (!data.length) {
+      container.innerHTML = '<div class="card"><div class="empty-icon">🧾</div><div class="empty-title">Recent Bills</div><div class="empty-sub">No bills yet. Completed sales will show up here.</div></div>';
+      return;
+    }
+
+    container.innerHTML = data.map(inv => {
+      const shortId = '#' + inv.id.slice(0, 8).toUpperCase();
+      const date = new Date(inv.created_at).toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+      return `
+        <div class="bill-card">
+          <div class="bill-top">
+            <div class="bill-id">${shortId}</div>
+            <div class="status-badge">completed</div>
+          </div>
+          <div class="bill-amount">৳${Number(inv.total_amount).toFixed(2)}</div>
+          <div class="bill-meta">
+            <span>${(inv.payment_method || 'cash')}</span>
+            <span>${date}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Tab switching
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      item.classList.add('active');
+      document.getElementById('panel-' + item.dataset.panel).classList.add('active');
+
+      if (item.dataset.panel === 'bills' && !billsLoaded) {
+        billsLoaded = true;
+        loadBills();
+      }
+    });
+  });
+
+  init();
+</script>
+
+</body>
+</html>
