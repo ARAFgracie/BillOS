@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BillOS — Billing</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root{
+    --blue:#3B5FE2;
+    --blue-dark:#2E4BC4;
+    --bg-top:#E9ECF8;
+    --bg-bottom:#DDE2F2;
+    --ink:#1A1D29;
+    --muted:#6B7280;
+    --card:#FFFFFF;
+    --border:#E5E7F0;
+    --green:#16A34A;
+    --amber-bg:#FCEBC5;
+    --amber-text:#B7791F;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background:linear-gradient(160deg, var(--bg-top), var(--bg-bottom));
+    color:var(--ink);
+    padding-bottom:100px;
+  }
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 20px; background:#fff; border-bottom:1px solid var(--border);
+  }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .logo{
+    width:40px; height:40px; background:var(--blue); border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-weight:800; font-size:18px;
+  }
+  .brand-name{ font-size:19px; font-weight:800; }
+  .back-link{ font-size:13px; color:var(--blue); font-weight:700; text-decoration:none; }
+
+  .content{ padding:20px; max-width:600px; margin:0 auto; }
+  .content h1{ font-size:22px; margin:0 0 4px; }
+  .sub{ font-size:13px; color:var(--muted); margin-bottom:18px; }
+
+  .search{
+    width:100%; padding:13px 16px; margin-bottom:16px;
+    border-radius:14px; border:1px solid var(--border);
+    background:#fff; font-size:14px; outline:none;
+  }
+  .search:focus{ border-color:var(--blue); }
+
+  .product-row{
+    display:flex; align-items:center; justify-content:space-between;
+    background:#fff; border:1px solid var(--border); border-radius:14px;
+    padding:14px 16px; margin-bottom:10px;
+  }
+  .p-name{ font-weight:700; font-size:14px; }
+  .p-meta{ font-size:12px; color:var(--muted); margin-top:2px; }
+  .badge{
+    display:inline-block; background:var(--amber-bg); color:var(--amber-text);
+    font-size:10px; font-weight:800; padding:2px 7px; border-radius:20px; margin-left:6px;
+  }
+  .add-btn{
+    background:var(--blue); color:#fff; border:none; border-radius:12px;
+    padding:9px 18px; font-weight:700; font-size:13px; cursor:pointer;
+  }
+  .add-btn:hover{ background:var(--blue-dark); }
+
+  .icon-btn{
+    width:32px; height:32px; border-radius:10px; border:1px solid var(--border);
+    background:#fff; cursor:pointer; font-size:16px; font-weight:700; color:var(--blue);
+  }
+  .icon-btn:hover{ background:#F3F4FA; }
+
+  .empty-card{
+    background:#fff; border:1px solid var(--border); border-radius:16px;
+    padding:24px; text-align:center; color:var(--muted); font-size:13px;
+  }
+
+  .cart-bar{
+    position:fixed; bottom:0; left:0; right:0;
+    background:#fff; border-top:1px solid var(--border);
+    padding:14px 20px; box-shadow:0 -4px 16px rgba(0,0,0,0.06);
+  }
+  .cart-row{ display:flex; justify-content:space-between; align-items:center; max-width:600px; margin:0 auto; }
+  .cart-info{ font-size:13px; color:var(--muted); }
+  .cart-total{ font-size:20px; font-weight:800; }
+  .charge-btn{
+    background:var(--blue); color:#fff; border:none; border-radius:14px;
+    padding:14px 26px; font-weight:800; font-size:15px; cursor:pointer;
+  }
+  .charge-btn:disabled{ opacity:.5; cursor:not-allowed; }
+
+  /* Modal */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(26,29,41,0.5);
+    display:none; align-items:flex-end; justify-content:center; z-index:10;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal{
+    background:#fff; border-radius:20px 20px 0 0; padding:24px 20px 28px;
+    width:100%; max-width:600px;
+  }
+  .modal h3{ margin:0 0 16px; }
+  .pay-options{ display:flex; gap:10px; margin-bottom:20px; }
+  .pay-opt{
+    flex:1; text-align:center; padding:12px 0; border-radius:12px;
+    border:2px solid var(--border); font-weight:700; font-size:14px; cursor:pointer; color:var(--muted);
+  }
+  .pay-opt.selected{ border-color:var(--blue); color:var(--blue); background:#EEF1FC; }
+  .confirm-btn{
+    width:100%; padding:14px 0; border:none; border-radius:14px;
+    background:var(--green); color:#fff; font-weight:800; font-size:15px; cursor:pointer;
+  }
+  .cancel-link{
+    display:block; text-align:center; margin-top:12px; color:var(--muted); font-size:13px;
+  }
+  .msg{ margin-top:12px; font-size:13px; padding:10px; border-radius:10px; display:none; }
+  .msg.error{ display:block; background:#FEECEC; color:#DC2626; }
+  .msg.success{ display:block; background:#E7F8EE; color:#16A34A; }
+
+  .loading{ text-align:center; padding:60px 20px; color:var(--muted); }
+</style>
+</head>
+<body>
+
+<div id="loading" class="loading">Loading BillOS...</div>
+
+<div id="app" style="display:none;">
+  <div class="topbar">
+    <div class="brand">
+      <div class="logo">B</div>
+      <div class="brand-name">BillOS</div>
+    </div>
+    <a href="dashboard.html" class="back-link">← Dashboard</a>
+  </div>
+
+  <div class="content">
+    <h1>New Bill</h1>
+    <div class="sub">Tap products to add to the bill</div>
+    <input type="text" class="search" id="search" placeholder="Search products...">
+    <div id="product-list"></div>
+  </div>
+
+  <div class="cart-bar">
+    <div class="cart-row">
+      <div class="cart-info" id="cart-info">0 items</div>
+      <div class="cart-total" id="cart-total">৳0</div>
+      <button class="charge-btn" id="charge-btn" disabled>Charge</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h3>Complete Bill — <span id="modal-total"></span></h3>
+    <div class="pay-options">
+      <div class="pay-opt selected" data-method="cash">Cash</div>
+      <div class="pay-opt" data-method="card">Card</div>
+    </div>
+    <button class="confirm-btn" id="confirm-btn">Confirm Payment</button>
+    <div class="msg" id="charge-msg"></div>
+    <a href="#" class="cancel-link" id="cancel-link">Cancel</a>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = "https://ektdcnvraluuwxmqhjvj.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_yTDG8ujXgVE81BNAvPvZlw_tlbfKNTm";
+  const { createClient } = supabase;
+  const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let profile = null;
+  let products = [];
+  let cart = {}; // productId -> { product, qty }
+  let selectedPayment = 'cash';
+
+  async function init() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { window.location.href = 'login.html'; return; }
+
+    const { data: p, error } = await sb
+      .from('profiles')
+      .select('id, full_name, role, shop_id')
+      .eq('id', session.user.id)
+      .single();
+
+    if (error || !p) {
+      document.getElementById('loading').textContent = 'Could not load your profile.';
+      return;
+    }
+    profile = p;
+
+    await loadProducts();
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+  }
+
+  async function loadProducts() {
+    const { data, error } = await sb
+      .from('products')
+      .select('*')
+      .eq('shop_id', profile.shop_id)
+      .not('code', 'is', null)
+      .neq('code', '')
+      .order('name');
+
+    products = data || [];
+    renderProducts(products);
+  }
+
+  function renderProducts(list) {
+    const container = document.getElementById('product-list');
+    if (!list.length) {
+      container.innerHTML = '<div class="empty-card">No products with a code yet. Add a Product Code to items in Inventory to make them billable.</div>';
+      return;
+    }
+    container.innerHTML = list.map(p => {
+      const low = p.stock_quantity <= 5 ? '<span class="badge">LOW</span>' : '';
+      const qty = cart[p.id] ? cart[p.id].qty : 0;
+
+      let controls;
+      if (p.is_weighted) {
+        controls = `
+          <div style="display:flex;align-items:center;gap:6px;">
+            <input type="number" min="0" step="0.01" value="${qty || ''}" placeholder="0" 
+              style="width:70px;padding:8px;border-radius:10px;border:1px solid var(--border);font-size:14px;text-align:right;"
+              onchange="setQty('${p.id}', this.value)">
+            <span style="font-size:12px;color:var(--muted);">${p.unit}</span>
+          </div>`;
+      } else if (qty > 0) {
+        controls = `
+          <div style="display:flex;align-items:center;gap:10px;">
+            <button class="icon-btn" onclick="changeQty('${p.id}', -1)">−</button>
+            <span style="min-width:22px;text-align:center;font-weight:700;">${qty}</span>
+            <button class="icon-btn" onclick="changeQty('${p.id}', 1)">+</button>
+          </div>`;
+      } else {
+        controls = `<button class="add-btn" onclick="addToCart('${p.id}')">Add</button>`;
+      }
+
+      return `
+        <div class="product-row">
+          <div>
+            <div class="p-name">${p.name}${low}</div>
+            <div class="p-meta">৳${p.price}/${p.unit} · ${p.stock_quantity} in stock</div>
+          </div>
+          ${controls}
+        </div>
+      `;
+    }).join('');
+  }
+
+  window.setQty = function(productId, value) {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+    const qty = parseFloat(value);
+    if (!qty || qty <= 0) {
+      delete cart[productId];
+    } else {
+      cart[productId] = { product, qty };
+    }
+    updateCartBar();
+  };
+
+  window.changeQty = function(productId, delta) {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+    if (!cart[productId]) cart[productId] = { product, qty: 0 };
+    cart[productId].qty += delta;
+    if (cart[productId].qty <= 0) delete cart[productId];
+    updateCartBar();
+    renderProducts(products);
+  };
+
+  window.addToCart = function(productId) {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+    if (!cart[productId]) cart[productId] = { product, qty: 0 };
+    cart[productId].qty += 1;
+    updateCartBar();
+    renderProducts(products);
+  };
+
+  function updateCartBar() {
+    const items = Object.values(cart);
+    const totalQty = items.reduce((sum, i) => sum + i.qty, 0);
+    const totalAmount = items.reduce((sum, i) => sum + i.qty * i.product.price, 0);
+
+    document.getElementById('cart-info').textContent = totalQty + ' item' + (totalQty !== 1 ? 's' : '');
+    document.getElementById('cart-total').textContent = '৳' + totalAmount.toFixed(2);
+    document.getElementById('charge-btn').disabled = totalQty === 0;
+  }
+
+  document.getElementById('search').addEventListener('input', (e) => {
+    const q = e.target.value.toLowerCase();
+    renderProducts(products.filter(p => p.name.toLowerCase().includes(q) || (p.code || '').toLowerCase().includes(q)));
+  });
+
+  // Modal open/close
+  document.getElementById('charge-btn').addEventListener('click', () => {
+    const totalAmount = Object.values(cart).reduce((sum, i) => sum + i.qty * i.product.price, 0);
+    document.getElementById('modal-total').textContent = '৳' + totalAmount.toFixed(2);
+    document.getElementById('modal-overlay').classList.add('open');
+  });
+  document.getElementById('cancel-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('modal-overlay').classList.remove('open');
+  });
+
+  document.querySelectorAll('.pay-opt').forEach(opt => {
+    opt.addEventListener('click', () => {
+      document.querySelectorAll('.pay-opt').forEach(o => o.classList.remove('selected'));
+      opt.classList.add('selected');
+      selectedPayment = opt.dataset.method;
+    });
+  });
+
+  document.getElementById('confirm-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('confirm-btn');
+    const msg = document.getElementById('charge-msg');
+    btn.disabled = true; btn.textContent = 'Processing...';
+
+    const items = Object.values(cart);
+    const totalAmount = items.reduce((sum, i) => sum + i.qty * i.product.price, 0);
+
+    // 1. Create invoice
+    const { data: invoice, error: invError } = await sb
+      .from('invoices')
+      .insert({
+        shop_id: profile.shop_id,
+        created_by: profile.id,
+        total_amount: totalAmount,
+        payment_method: selectedPayment
+      })
+      .select()
+      .single();
+
+    if (invError) {
+      btn.disabled = false; btn.textContent = 'Confirm Payment';
+      msg.textContent = 'Failed: ' + invError.message;
+      msg.className = 'msg error';
+      return;
+    }
+
+    // 2. Create invoice items
+    const invoiceItems = items.map(i => ({
+      invoice_id: invoice.id,
+      product_id: i.product.id,
+      quantity: i.qty,
+      unit_price: i.product.price,
+      line_total: i.qty * i.product.price
+    }));
+
+    const { error: itemsError } = await sb.from('invoice_items').insert(invoiceItems);
+
+    if (itemsError) {
+      btn.disabled = false; btn.textContent = 'Confirm Payment';
+      msg.textContent = 'Invoice created but items failed: ' + itemsError.message;
+      msg.className = 'msg error';
+      return;
+    }
+
+    // 3. Update stock (best-effort, one product at a time)
+    for (const i of items) {
+      await sb.from('products')
+        .update({ stock_quantity: i.product.stock_quantity - i.qty })
+        .eq('id', i.product.id);
+    }
+
+    msg.textContent = 'Bill completed successfully!';
+    msg.className = 'msg success';
+    btn.textContent = 'Confirm Payment';
+
+    setTimeout(() => {
+      cart = {};
+      updateCartBar();
+      document.getElementById('modal-overlay').classList.remove('open');
+      msg.className = 'msg';
+      btn.disabled = false;
+      loadProducts();
+    }, 1200);
+  });
+
+  init();
+</script>
+
+</body>
+</html>
