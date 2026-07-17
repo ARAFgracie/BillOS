@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BillOS — Analytics</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root{
+    --blue:#3B5FE2;
+    --ink:#1A1D29;
+    --muted:#5B6270;
+    --green:#16A34A;
+    --glass-bg:rgba(255,255,255,0.55);
+    --glass-bg-strong:rgba(255,255,255,0.75);
+    --glass-border:rgba(255,255,255,0.6);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh;
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(circle at 15% 10%, rgba(120,150,255,0.35), transparent 40%),
+      radial-gradient(circle at 85% 20%, rgba(255,180,220,0.3), transparent 45%),
+      radial-gradient(circle at 30% 80%, rgba(150,220,255,0.3), transparent 45%),
+      radial-gradient(circle at 90% 90%, rgba(190,160,255,0.3), transparent 40%),
+      linear-gradient(160deg, #EEF0FA, #E2E6F5);
+    background-attachment:fixed;
+  }
+  .glass{
+    background:var(--glass-bg);
+    backdrop-filter:blur(20px) saturate(160%);
+    -webkit-backdrop-filter:blur(20px) saturate(160%);
+    border:1px solid var(--glass-border);
+  }
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 20px;
+    background:var(--glass-bg-strong);
+    backdrop-filter:blur(24px) saturate(160%);
+    -webkit-backdrop-filter:blur(24px) saturate(160%);
+    border-bottom:1px solid var(--glass-border);
+  }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .logo{
+    width:38px; height:38px; background:linear-gradient(135deg, var(--blue), #6C8CFF);
+    border-radius:11px; display:flex; align-items:center; justify-content:center;
+    color:#fff; font-weight:800; font-size:17px;
+  }
+  .brand-name{ font-size:18px; font-weight:800; }
+  .back-link{ font-size:13px; color:var(--blue); font-weight:700; text-decoration:none; }
+
+  .content{ padding:20px 18px; max-width:600px; margin:0 auto; }
+  .content h1{ font-size:21px; margin:0 0 16px; }
+
+  .stat-row{ display:flex; gap:10px; margin-bottom:18px; }
+  .stat{ flex:1; border-radius:16px; padding:16px; }
+  .stat .label{ font-size:11px; color:var(--muted); margin-bottom:4px; }
+  .stat .num{ font-size:22px; font-weight:800; }
+
+  .section-title{ font-size:15px; font-weight:800; margin:20px 0 10px; }
+  .rank-row{
+    display:flex; align-items:center; justify-content:space-between;
+    border-radius:14px; padding:12px 15px; margin-bottom:8px;
+  }
+  .rank-name{ font-weight:700; font-size:13.5px; }
+  .rank-sub{ font-size:11px; color:var(--muted); }
+  .rank-amount{ font-weight:800; font-size:14px; color:var(--green); }
+
+  .empty-card{ border-radius:16px; padding:24px; text-align:center; color:var(--muted); font-size:13px; }
+  .loading{ text-align:center; padding:60px 20px; color:var(--muted); }
+</style>
+</head>
+<body>
+
+<div id="loading" class="loading">Loading BillOS...</div>
+
+<div id="app" style="display:none;">
+  <div class="topbar">
+    <div class="brand">
+      <div class="logo">B</div>
+      <div class="brand-name">BillOS</div>
+    </div>
+    <a href="dashboard.html" class="back-link">← Dashboard</a>
+  </div>
+
+  <div class="content">
+    <h1>Product Analytics</h1>
+    <div class="stat-row">
+      <div class="stat glass"><div class="label">TOTAL REVENUE</div><div class="num" id="total-revenue">৳0</div></div>
+      <div class="stat glass"><div class="label">ITEMS SOLD</div><div class="num" id="total-items">0</div></div>
+    </div>
+
+    <div class="section-title">Best Selling Products</div>
+    <div id="best-selling"></div>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = "https://ektdcnvraluuwxmqhjvj.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_yTDG8ujXgVE81BNAvPvZlw_tlbfKNTm";
+  const { createClient } = supabase;
+  const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  async function init() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { window.location.href = 'login.html'; return; }
+
+    const { data: profile, error } = await sb
+      .from('profiles')
+      .select('shop_id, role')
+      .eq('id', session.user.id)
+      .single();
+
+    if (error || !profile) {
+      document.getElementById('loading').textContent = 'Could not load your profile.';
+      return;
+    }
+
+    await loadAnalytics(profile.shop_id);
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+  }
+
+  async function loadAnalytics(shopId) {
+    // Get all invoices for this shop
+    const { data: invoices } = await sb
+      .from('invoices')
+      .select('id, total_amount')
+      .eq('shop_id', shopId);
+
+    const totalRevenue = (invoices || []).reduce((sum, i) => sum + Number(i.total_amount), 0);
+    document.getElementById('total-revenue').textContent = '৳' + totalRevenue.toFixed(0);
+
+    if (!invoices || !invoices.length) {
+      document.getElementById('best-selling').innerHTML = '<div class="empty-card glass">No sales data yet.</div>';
+      return;
+    }
+
+    const invoiceIds = invoices.map(i => i.id);
+    const { data: items } = await sb
+      .from('invoice_items')
+      .select('product_id, quantity, line_total, products(name, unit)')
+      .in('invoice_id', invoiceIds);
+
+    if (!items || !items.length) {
+      document.getElementById('best-selling').innerHTML = '<div class="empty-card glass">No sales data yet.</div>';
+      return;
+    }
+
+    let totalQty = 0;
+    const byProduct = {};
+    items.forEach(it => {
+      totalQty += Number(it.quantity);
+      const key = it.product_id;
+      if (!byProduct[key]) byProduct[key] = { name: it.products?.name || 'Unknown', unit: it.products?.unit || '', qty: 0, revenue: 0 };
+      byProduct[key].qty += Number(it.quantity);
+      byProduct[key].revenue += Number(it.line_total);
+    });
+    document.getElementById('total-items').textContent = totalQty.toFixed(0);
+
+    const ranked = Object.values(byProduct).sort((a, b) => b.revenue - a.revenue).slice(0, 10);
+    document.getElementById('best-selling').innerHTML = ranked.map(p => `
+      <div class="rank-row glass">
+        <div>
+          <div class="rank-name">${p.name}</div>
+          <div class="rank-sub">${p.qty} ${p.unit} sold</div>
+        </div>
+        <div class="rank-amount">৳${p.revenue.toFixed(0)}</div>
+      </div>
+    `).join('');
+  }
+
+  init();
+</script>
+
+</body>
+</html>
