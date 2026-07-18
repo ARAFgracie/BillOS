@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BillOS — Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root{
+    --blue:#3B5FE2;
+    --ink:#1A1D29;
+    --muted:#5B6270;
+    --glass-bg:rgba(255,255,255,0.55);
+    --glass-bg-strong:rgba(255,255,255,0.75);
+    --glass-border:rgba(255,255,255,0.6);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh;
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color:var(--ink);
+    padding-bottom:90px;
+    background:
+      radial-gradient(circle at 15% 10%, rgba(120,150,255,0.35), transparent 40%),
+      radial-gradient(circle at 85% 20%, rgba(255,180,220,0.3), transparent 45%),
+      radial-gradient(circle at 30% 80%, rgba(150,220,255,0.3), transparent 45%),
+      radial-gradient(circle at 90% 90%, rgba(190,160,255,0.3), transparent 40%),
+      linear-gradient(160deg, #EEF0FA, #E2E6F5);
+    background-attachment:fixed;
+  }
+  .glass{
+    background:var(--glass-bg);
+    backdrop-filter:blur(20px) saturate(160%);
+    -webkit-backdrop-filter:blur(20px) saturate(160%);
+    border:1px solid var(--glass-border);
+  }
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:12px; padding:14px 20px;
+    background:var(--glass-bg-strong);
+    backdrop-filter:blur(24px) saturate(160%);
+    -webkit-backdrop-filter:blur(24px) saturate(160%);
+    border-bottom:1px solid var(--glass-border);
+  }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .logo{
+    width:38px; height:38px;
+    background:linear-gradient(135deg, var(--blue), #6C8CFF);
+    border-radius:11px;
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-weight:800; font-size:17px;
+    box-shadow:0 4px 12px rgba(59,95,226,0.35);
+  }
+  .brand-name{ font-size:18px; font-weight:800; }
+  .role-pill{ border-radius:20px; padding:7px 15px; font-size:12px; font-weight:700; text-transform:capitalize; }
+
+  .content{
+    padding:22px 18px; max-width:600px; margin:0 auto;
+    min-height:calc(100vh - 180px);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center;
+  }
+  .greeting-small{ font-size:14px; color:var(--muted); margin-bottom:2px; }
+  .shopname{ font-size:13px; color:var(--muted); margin-bottom:36px; font-weight:600; }
+
+  .hero-text{
+    font-size:34px;
+    font-weight:800;
+    line-height:1.25;
+    max-width:340px;
+  }
+  .hero-word{
+    display:inline-block;
+    opacity:0;
+    transform:translateY(16px);
+    animation:wordIn 0.6s ease forwards;
+    background:linear-gradient(135deg, var(--blue), #8AA4FF, #5B7DF0);
+    background-size:200% 200%;
+    -webkit-background-clip:text;
+    background-clip:text;
+    -webkit-text-fill-color:transparent;
+    animation:wordIn 0.6s ease forwards, shimmer 4s ease-in-out infinite 1.5s;
+  }
+  @keyframes wordIn{
+    to{ opacity:1; transform:translateY(0); }
+  }
+  @keyframes shimmer{
+    0%, 100%{ background-position:0% 50%; }
+    50%{ background-position:100% 50%; }
+  }
+  .hero-icon{
+    width:64px; height:64px; border-radius:20px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:28px; margin-bottom:22px;
+    background:linear-gradient(135deg, rgba(59,95,226,0.15), rgba(108,140,255,0.15));
+    border:1px solid var(--glass-border);
+    animation:floaty 3.5s ease-in-out infinite;
+  }
+  @keyframes floaty{
+    0%, 100%{ transform:translateY(0); }
+    50%{ transform:translateY(-8px); }
+  }
+
+  .nav-card.hidden{ display:none; }
+
+  .bottom-nav{
+    position:fixed; bottom:12px; left:12px; right:12px;
+    border-radius:22px;
+    display:flex; padding:8px 4px;
+    background:var(--glass-bg-strong);
+    backdrop-filter:blur(24px) saturate(160%);
+    -webkit-backdrop-filter:blur(24px) saturate(160%);
+    border:1px solid var(--glass-border);
+    box-shadow:0 8px 32px rgba(26,29,41,0.15);
+  }
+  .nav-item{
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
+    padding:8px 0; border-radius:14px; color:var(--muted);
+    font-size:10.5px; font-weight:700; text-decoration:none;
+  }
+  .nav-item .icon{ font-size:18px; }
+  .nav-item.hidden{ display:none; }
+
+  .loading{ text-align:center; padding:60px 20px; color:var(--muted); }
+</style>
+</head>
+<body>
+
+<div id="loading" class="loading">Loading BillOS...</div>
+
+<div id="app" style="display:none;">
+  <div class="topbar">
+    <div class="brand">
+      <div class="logo">B</div>
+      <div class="brand-name">BillOS</div>
+    </div>
+    <div class="role-pill glass" id="role-pill">—</div>
+  </div>
+
+  <div class="content">
+    <div class="greeting-small" id="greeting">Welcome</div>
+    <div class="shopname" id="shop-name"></div>
+
+    <div class="hero-icon">💳</div>
+    <div class="hero-text" id="hero-text"></div>
+  </div>
+
+  <div class="bottom-nav">
+    <a href="billing.html" class="nav-item"><div class="icon">🛒</div>Billing</a>
+    <a href="inventory.html" class="nav-item" id="bn-inventory"><div class="icon">📦</div>Inventory</a>
+    <a href="bills.html" class="nav-item"><div class="icon">🧾</div>Bills</a>
+    <a href="analytics.html" class="nav-item" id="bn-analytics"><div class="icon">📊</div>Analytics</a>
+    <a href="reports.html" class="nav-item" id="bn-reports"><div class="icon">📈</div>Reports</a>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = "https://ektdcnvraluuwxmqhjvj.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_yTDG8ujXgVE81BNAvPvZlw_tlbfKNTm";
+  const { createClient } = supabase;
+  const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  async function init() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { window.location.href = 'login.html'; return; }
+
+    const { data: p, error } = await sb
+      .from('profiles')
+      .select('full_name, role, shop_id, shops(name)')
+      .eq('id', session.user.id)
+      .single();
+
+    if (error || !p) {
+      document.getElementById('loading').textContent = 'Could not load your profile. Please contact support.';
+      return;
+    }
+
+    document.getElementById('greeting').textContent = 'Welcome, ' + (p.full_name || 'there');
+    document.getElementById('shop-name').textContent = p.shops?.name || '';
+    document.getElementById('role-pill').textContent = p.role.replace('_', ' ');
+
+    buildHeroText('Manage, maintain and utilize cash flow');
+
+    if (p.role === 'sales_executive') {
+      document.getElementById('nav-inventory').classList.add('hidden');
+      document.getElementById('nav-analytics').classList.add('hidden');
+      document.getElementById('nav-reports').classList.add('hidden');
+      document.getElementById('bn-inventory').classList.add('hidden');
+      document.getElementById('bn-analytics').classList.add('hidden');
+      document.getElementById('bn-reports').classList.add('hidden');
+    }
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+  }
+
+  function buildHeroText(text) {
+    const el = document.getElementById('hero-text');
+    const words = text.split(' ');
+    el.innerHTML = words.map((w, i) =>
+      `<span class="hero-word" style="animation-delay:${i * 0.12}s, ${1.5 + i * 0.12}s">${w}</span>`
+    ).join(' ');
+  }
+
+  init();
+</script>
+
+</body>
+</html>
