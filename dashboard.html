@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>BillOS — Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  /* ============================================================
+     DESIGN TOKENS — one block per theme. Add a new theme by
+     adding another html[data-theme="..."] block; the JS THEME_OPTIONS
+     array below is the only other place that needs a new entry.
+     ============================================================ */
+  :root{
+    --blue:#3B5FE2;
+    --ink:#1A1D29;
+    --muted:#5F6673;
+    --amber-text:#B7791F;
+    --glass-bg-strong:rgba(255,255,255,0.6);
+    --glow:transparent;
+  }
+  html[data-theme="dark"]{
+    --blue:#6C8CFF;
+    --ink:#EAECEF;
+    --muted:#96A0B5;
+    --amber-text:#F5B942;
+    --glass-bg-strong:rgba(255,255,255,0.09);
+    --glow:rgba(108,140,255,0.45);
+  }
+  html[data-theme="ash"]{
+    --blue:#7C9BFF;
+    --ink:#E4E6EB;
+    --muted:#B0B3B8;
+    --amber-text:#F5B942;
+    --glass-bg-strong:rgba(255,255,255,0.07);
+    --glow:rgba(255,255,255,0.25);
+  }
+
+  /* ============================================================
+     BASE / RESET
+     ============================================================ */
+  *{box-sizing:border-box;}
+  html, body{ height:100%; margin:0; overscroll-behavior:none; }
+  body{
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color:var(--ink);
+    transition:background 0.1s ease, color 0.1s ease;
+    /* Light: soft multi-color mix, muted and premium (not oversaturated) */
+    background:
+      radial-gradient(circle at 12% 8%, rgba(91,125,240,0.20), transparent 42%),
+      radial-gradient(circle at 90% 12%, rgba(168,140,240,0.16), transparent 45%),
+      radial-gradient(circle at 20% 90%, rgba(120,200,190,0.14), transparent 45%),
+      radial-gradient(circle at 92% 92%, rgba(240,180,140,0.12), transparent 40%),
+      linear-gradient(160deg, #F8F9FC, #EEF0F5, #E3E6ED);
+  }
+  html[data-theme="dark"] body{
+    /* Dark Navy Glassy */
+    background:
+      radial-gradient(circle at 20% 0%, rgba(91,125,240,0.22), transparent 45%),
+      radial-gradient(circle at 90% 10%, rgba(140,110,240,0.16), transparent 45%),
+      radial-gradient(circle at 15% 90%, rgba(60,100,200,0.18), transparent 45%),
+      radial-gradient(circle at 85% 95%, rgba(91,125,240,0.12), transparent 40%),
+      linear-gradient(160deg, #0B1120, #161F35, #0B1120);
+  }
+  html[data-theme="ash"] body{
+    /* Ash Gradient — Facebook-style charcoal, with a faint premium glow */
+    background:
+      radial-gradient(circle at 15% 5%, rgba(124,155,255,0.10), transparent 45%),
+      radial-gradient(circle at 90% 100%, rgba(255,255,255,0.05), transparent 40%),
+      linear-gradient(160deg, #18191A, #242526, #18191A);
+  }
+
+  /* ============================================================
+     GLASS SURFACE (shared by cards, pills, nav, menus)
+     ============================================================ */
+  .glass{
+    background:linear-gradient(180deg, rgba(255,255,255,0.42), rgba(255,255,255,0.16));
+    backdrop-filter:blur(26px) saturate(180%);
+    -webkit-backdrop-filter:blur(26px) saturate(180%);
+    border:1px solid rgba(255,255,255,0.55);
+    box-shadow:inset 0 1px 1px rgba(255,255,255,0.9), 0 4px 16px rgba(59,95,226,0.08);
+    transition:background 0.1s ease, border-color 0.1s ease, box-shadow 0.1s ease;
+  }
+  html[data-theme="dark"] .glass,
+  html[data-theme="ash"] .glass{
+    background:linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.03));
+    border:1px solid rgba(255,255,255,0.13);
+    box-shadow:inset 0 1px 1px rgba(255,255,255,0.10), 0 4px 20px rgba(0,0,0,0.25);
+  }
+
+  /* ============================================================
+     PAGE LAYOUT — fixed viewport, no page-level scroll
+     ============================================================ */
+  .page{ height:100vh; height:100dvh; display:flex; flex-direction:column; overflow:hidden; }
+
+  .topbar{
+    flex-shrink:0;
+    display:flex; align-items:center; justify-content:space-between;
+    gap:12px; padding:14px 20px;
+    background:linear-gradient(180deg, rgba(255,255,255,0.5), rgba(255,255,255,0.25));
+    backdrop-filter:blur(24px) saturate(180%);
+    -webkit-backdrop-filter:blur(24px) saturate(180%);
+    border-bottom:1px solid rgba(255,255,255,0.5);
+    box-shadow:inset 0 1px 1px rgba(255,255,255,0.7);
+  }
+  html[data-theme="dark"] .topbar,
+  html[data-theme="ash"] .topbar{
+    background:linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+    border-bottom:1px solid rgba(255,255,255,0.12);
+    box-shadow:inset 0 1px 1px rgba(255,255,255,0.08);
+  }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .logo{
+    width:38px; height:38px;
+    background:linear-gradient(135deg, var(--blue), #6C8CFF);
+    border-radius:11px;
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-weight:800; font-size:17px;
+    box-shadow:0 4px 12px rgba(59,95,226,0.35);
+  }
+  .brand-name{ font-size:18px; font-weight:800; }
+  .topbar-actions{ display:flex; align-items:center; gap:10px; position:relative; }
+  .role-pill{ border-radius:20px; padding:7px 15px; font-size:12px; font-weight:700; text-transform:capitalize; }
+
+  /* ---------- Theme switcher ---------- */
+  .theme-switcher{ position:relative; }
+  .theme-toggle{
+    width:34px; height:34px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    font-size:15px;
+  }
+  .theme-menu{
+    position:absolute;
+    top:calc(100% + 10px);
+    right:0;
+    min-width:180px;
+    border-radius:18px;
+    padding:6px;
+    display:none;
+    flex-direction:column;
+    gap:2px;
+    z-index:50;
+    box-shadow:0 16px 40px rgba(26,29,41,0.18);
+  }
+  .theme-menu.open{ display:flex; }
+  .theme-option{
+    display:flex; align-items:center; gap:10px;
+    padding:10px 12px;
+    border-radius:12px;
+    font-size:13px; font-weight:600;
+    color:var(--ink);
+    cursor:pointer;
+    transition:background 0.15s ease;
+  }
+  .theme-option:hover{ background:rgba(127,127,127,0.14); }
+  .theme-option.active{ color:var(--blue); background:rgba(108,140,255,0.14); }
+  .theme-option .swatch{
+    width:20px; height:20px; border-radius:7px; flex-shrink:0;
+    border:1px solid rgba(127,127,127,0.25);
+  }
+
+  /* ============================================================
+     MAIN CONTENT
+     ============================================================ */
+  .content{
+    flex:1; min-height:0;
+    padding:clamp(10px, 3vh, 22px) 18px;
+    max-width:600px; width:100%; margin:0 auto;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center;
+    gap:clamp(10px, 2.2vh, 20px);
+  }
+  .greeting-block{ display:flex; flex-direction:column; gap:2px; }
+  .greeting-small{ font-size:14px; color:var(--muted); }
+  .shopname{ font-size:13px; color:var(--muted); font-weight:600; }
+
+  .stat-row{ display:flex; gap:10px; width:100%; }
+  .stat{ flex:1; border-radius:16px; padding:clamp(10px, 2vh, 14px) 10px; text-align:center; }
+  .stat .num{ font-size:clamp(15px, 3.6vh, 18px); font-weight:800; }
+  .stat .label{ font-size:9.5px; color:var(--muted); margin-top:3px; text-transform:uppercase; letter-spacing:0.3px; }
+  html[data-theme="dark"] .stat .num,
+  html[data-theme="ash"] .stat .num{ text-shadow:0 0 14px var(--glow); }
+
+  .hero{ display:flex; flex-direction:column; align-items:center; }
+  .hero-icon{
+    width:clamp(38px, 8vh, 44px); height:clamp(38px, 8vh, 44px);
+    border-radius:14px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:clamp(16px, 3.5vh, 19px);
+    margin-bottom:clamp(8px, 2vh, 14px);
+    background:linear-gradient(135deg, rgba(59,95,226,0.15), rgba(108,140,255,0.15));
+    border:1px solid rgba(127,127,127,0.2);
+    animation:floaty 3.5s ease-in-out infinite;
+  }
+  html[data-theme="dark"] .hero-icon,
+  html[data-theme="ash"] .hero-icon{ box-shadow:0 0 24px rgba(108,140,255,0.25); }
+  .hero-text{ font-size:clamp(15px, 3.6vh, 19px); font-weight:700; line-height:1.4; max-width:300px; opacity:0.9; }
+  .hero-word{
+    display:inline-block; opacity:0; transform:translateY(16px);
+    background:linear-gradient(135deg, var(--blue), #8AA4FF, #5B7DF0);
+    background-size:200% 200%;
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+    animation:wordIn 0.6s ease forwards, shimmer 4s ease-in-out infinite 1.5s;
+  }
+  @keyframes wordIn{ to{ opacity:1; transform:translateY(0); } }
+  @keyframes shimmer{ 0%, 100%{ background-position:0% 50%; } 50%{ background-position:100% 50%; } }
+  @keyframes floaty{ 0%, 100%{ transform:translateY(0); } 50%{ transform:translateY(-6px); } }
+
+  /* ============================================================
+     BOTTOM NAVIGATION
+     ============================================================ */
+  .bottom-nav{
+    flex-shrink:0;
+    margin:0 14px 14px;
+    border-radius:26px;
+    display:flex; padding:10px 6px;
+    background:linear-gradient(180deg, rgba(255,255,255,0.45), rgba(255,255,255,0.18));
+    backdrop-filter:blur(28px) saturate(180%);
+    -webkit-backdrop-filter:blur(28px) saturate(180%);
+    border:1px solid rgba(255,255,255,0.55);
+    box-shadow:0 12px 40px rgba(26,29,41,0.14), inset 0 1px 1px rgba(255,255,255,0.85), inset 0 -1px 8px rgba(255,255,255,0.3);
+    transition:background 0.1s ease, border-color 0.1s ease;
+  }
+  html[data-theme="dark"] .bottom-nav,
+  html[data-theme="ash"] .bottom-nav{
+    background:linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.03));
+    border:1px solid rgba(255,255,255,0.13);
+    box-shadow:0 12px 40px rgba(0,0,0,0.45), inset 0 1px 1px rgba(255,255,255,0.10);
+  }
+  .nav-item{
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;
+    padding:9px 0; border-radius:16px; color:var(--muted);
+    font-size:10.5px; font-weight:700; text-decoration:none;
+    transition:background 0.2s, color 0.2s;
+  }
+  .nav-item.active{
+    color:var(--blue);
+    background:linear-gradient(180deg, rgba(255,255,255,0.5), rgba(255,255,255,0.2));
+    box-shadow:inset 0 1px 1px rgba(255,255,255,0.85), 0 2px 8px rgba(59,95,226,0.15);
+  }
+  html[data-theme="dark"] .nav-item.active,
+  html[data-theme="ash"] .nav-item.active{
+    background:linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06));
+    box-shadow:inset 0 1px 1px rgba(255,255,255,0.15), 0 2px 8px rgba(108,140,255,0.3);
+  }
+  .nav-item .icon{ width:22px; height:22px; }
+  .nav-item .icon svg{ width:100%; height:100%; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  .nav-item.hidden{ display:none; }
+
+  .loading{ text-align:center; padding:60px 20px; color:var(--muted); }
+</style>
+</head>
+<body>
+
+<div id="loading" class="loading">Loading BillOS...</div>
+
+<div id="app" class="page" style="display:none;">
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">B</div>
+      <div class="brand-name">BillOS</div>
+    </div>
+    <div class="topbar-actions">
+      <div class="role-pill glass" id="role-pill">—</div>
+      <div class="theme-switcher">
+        <div class="theme-toggle glass" id="theme-toggle" onclick="toggleThemeMenu()">🎨</div>
+        <div class="theme-menu glass" id="theme-menu"></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="content">
+    <div class="greeting-block">
+      <div class="greeting-small" id="greeting">Welcome</div>
+      <div class="shopname" id="shop-name"></div>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat glass"><div class="num" id="stat-sales">৳0</div><div class="label">Today's Sales</div></div>
+      <div class="stat glass"><div class="num" id="stat-bills">0</div><div class="label">Bills Today</div></div>
+      <div class="stat glass"><div class="num" id="stat-low" style="color:var(--amber-text)">0</div><div class="label">Low Stock</div></div>
+    </div>
+
+    <div class="hero">
+      <div class="hero-icon">💳</div>
+      <div class="hero-text" id="hero-text"></div>
+    </div>
+  </main>
+
+  <nav class="bottom-nav">
+    <a href="billing.html" class="nav-item">
+      <div class="icon"><svg viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg></div>
+      Billing
+    </a>
+    <a href="inventory.html" class="nav-item" id="bn-inventory">
+      <div class="icon"><svg viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"></path><path d="M3 8v8l9 5 9-5V8"></path><path d="M12 13v8"></path></svg></div>
+      Inventory
+    </a>
+    <a href="bills.html" class="nav-item">
+      <div class="icon"><svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6z"></path><path d="M15 2v5h5"></path><path d="M9 13h6"></path><path d="M9 17h6"></path></svg></div>
+      Bills
+    </a>
+    <a href="analytics.html" class="nav-item" id="bn-analytics">
+      <div class="icon"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"></path><rect x="7" y="12" width="3" height="6"></rect><rect x="12" y="8" width="3" height="10"></rect><rect x="17" y="5" width="3" height="13"></rect></svg></div>
+      Analytics
+    </a>
+    <a href="reports.html" class="nav-item" id="bn-reports">
+      <div class="icon"><svg viewBox="0 0 24 24"><path d="M23 6l-9.5 9.5-5-5L1 18"></path><path d="M17 6h6v6"></path></svg></div>
+      Reports
+    </a>
+  </nav>
+
+</div>
+
+<script>
+  const SUPABASE_URL = "https://ektdcnvraluuwxmqhjvj.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_yTDG8ujXgVE81BNAvPvZlw_tlbfKNTm";
+  const { createClient } = supabase;
+  const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const THEME_STORAGE_KEY = 'billos-theme';
+
+  /* ---------- Theme registry ----------
+     Add a new theme by: (1) adding a block above in <style> for
+     html[data-theme="value"], and (2) adding an entry here. */
+  const THEME_OPTIONS = [
+    { value: 'light', label: 'White',        icon: '☀️', swatch: 'linear-gradient(135deg, #F8F9FC, #E3E6ED)' },
+    { value: 'dark',  label: 'Dark Navy',     icon: '🌙', swatch: 'linear-gradient(135deg, #0B1120, #1E293B)' },
+    { value: 'ash',   label: 'Ash Gradient',  icon: '🌫️', swatch: 'linear-gradient(135deg, #18191A, #3A3B3C)' },
+  ];
+
+  function buildThemeMenu(activeTheme) {
+    const menu = document.getElementById('theme-menu');
+    menu.innerHTML = THEME_OPTIONS.map(opt => `
+      <div class="theme-option ${opt.value === activeTheme ? 'active' : ''}" onclick="selectTheme('${opt.value}')">
+        <div class="swatch" style="background:${opt.swatch}"></div>
+        <span>${opt.icon} ${opt.label}</span>
+      </div>
+    `).join('');
+  }
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+    const active = THEME_OPTIONS.find(o => o.value === theme) || THEME_OPTIONS[0];
+    document.getElementById('theme-toggle').textContent = active.icon;
+    buildThemeMenu(theme);
+  }
+
+  function selectTheme(theme) {
+    applyTheme(theme);
+    document.getElementById('theme-menu').classList.remove('open');
+  }
+
+  function toggleThemeMenu() {
+    document.getElementById('theme-menu').classList.toggle('open');
+  }
+
+  document.addEventListener('click', (e) => {
+    const switcher = document.querySelector('.theme-switcher');
+    if (switcher && !switcher.contains(e.target)) {
+      document.getElementById('theme-menu').classList.remove('open');
+    }
+  });
+
+  applyTheme(localStorage.getItem(THEME_STORAGE_KEY) || 'light');
+
+  /* ---------- Auth + profile ---------- */
+  async function init() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { window.location.href = 'login.html'; return; }
+
+    const { data: profile, error } = await sb
+      .from('profiles')
+      .select('full_name, role, shop_id, shops(name)')
+      .eq('id', session.user.id)
+      .single();
+
+    if (error || !profile) {
+      document.getElementById('loading').textContent = 'Could not load your profile. Please contact support.';
+      return;
+    }
+
+    renderProfile(profile);
+    buildHeroText('Manage, maintain and utilize cash flow');
+    await loadStats(profile.shop_id);
+    applyRoleVisibility(profile.role);
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+  }
+
+  function renderProfile(profile) {
+    document.getElementById('greeting').textContent = 'Welcome, ' + (profile.full_name || 'there');
+    document.getElementById('shop-name').textContent = profile.shops?.name || '';
+    document.getElementById('role-pill').textContent = profile.role.replace('_', ' ');
+  }
+
+  function applyRoleVisibility(role) {
+    if (role !== 'sales_executive') return;
+    ['bn-inventory', 'bn-analytics', 'bn-reports'].forEach(id => {
+      document.getElementById(id).classList.add('hidden');
+    });
+  }
+
+  /* ---------- Live stats ---------- */
+  async function loadStats(shopId) {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const [invoicesRes, productsRes] = await Promise.all([
+      sb.from('invoices')
+        .select('total_amount')
+        .eq('shop_id', shopId)
+        .gte('created_at', todayStart.toISOString()),
+      sb.from('products')
+        .select('stock_quantity')
+        .eq('shop_id', shopId)
+    ]);
+
+    const invoices = invoicesRes.data || [];
+    const totalSales = invoices.reduce((sum, inv) => sum + Number(inv.total_amount), 0);
+    document.getElementById('stat-sales').textContent = '৳' + totalSales.toFixed(0);
+    document.getElementById('stat-bills').textContent = invoices.length;
+
+    const products = productsRes.data || [];
+    const lowStockCount = products.filter(p => p.stock_quantity > 0 && p.stock_quantity <= 5).length;
+    document.getElementById('stat-low').textContent = lowStockCount;
+  }
+
+  /* ---------- Animated hero text ---------- */
+  function buildHeroText(text) {
+    const el = document.getElementById('hero-text');
+    const words = text.split(' ');
+    el.innerHTML = words
+      .map((word, i) => `<span class="hero-word" style="animation-delay:${i * 0.12}s, ${1.5 + i * 0.12}s">${word}</span>`)
+      .join(' ');
+  }
+
+  init();
+</script>
+
+</body>
+</html>
