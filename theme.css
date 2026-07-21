@@ -1,0 +1,175 @@
+/* ============================================================
+   BillOS — Shared Theme System
+   Single source of truth for colors, glass surfaces, and the
+   theme-switcher UI. Every page links this file so a theme
+   change here applies everywhere automatically.
+
+   Themes: light (default) | dark (Navy Glassy) | ash (Ash Gradient)
+   Add a new theme by adding one more html[data-theme="..."] block
+   below, plus a matching entry in THEME_OPTIONS inside theme.js.
+   ============================================================ */
+
+:root{
+  --blue:#3B5FE2;
+  --blue-dark:#2E4BC4;
+  --ink:#1A1D29;
+  --muted:#5B6270;
+  --card:#FFFFFF;
+  --border:#E5E7F0;
+  --error:#DC2626;
+  --success:#16A34A;
+  --green:#16A34A;
+  --amber-bg:#FCEBC5;
+  --amber-text:#B7791F;
+  --glass-bg:rgba(255,255,255,0.55);
+  --glass-bg-strong:rgba(255,255,255,0.75);
+  --glass-border:rgba(255,255,255,0.6);
+  --glow:transparent;
+}
+
+html[data-theme="dark"]{
+  --blue:#6C8CFF;
+  --blue-dark:#5B7DF0;
+  --ink:#EAECEF;
+  --muted:#96A0B5;
+  --card:rgba(255,255,255,0.07);
+  --border:rgba(255,255,255,0.13);
+  --amber-bg:rgba(245,185,66,0.15);
+  --amber-text:#F5B942;
+  --glass-bg:rgba(255,255,255,0.07);
+  --glass-bg-strong:rgba(255,255,255,0.09);
+  --glass-border:rgba(255,255,255,0.13);
+  --glow:rgba(108,140,255,0.45);
+}
+
+html[data-theme="ash"]{
+  --blue:#7C9BFF;
+  --blue-dark:#6C8CFF;
+  --ink:#E4E6EB;
+  --muted:#B0B3B8;
+  --card:rgba(255,255,255,0.06);
+  --border:rgba(255,255,255,0.10);
+  --amber-bg:rgba(245,185,66,0.15);
+  --amber-text:#F5B942;
+  --glass-bg:rgba(255,255,255,0.06);
+  --glass-bg-strong:rgba(255,255,255,0.08);
+  --glass-border:rgba(255,255,255,0.10);
+  --glow:rgba(255,255,255,0.25);
+}
+
+/* ---------- Page background ---------- */
+html, body{ margin:0; }
+body{
+  color:var(--ink);
+  transition:background 0.1s ease, color 0.1s ease;
+  background:
+    radial-gradient(circle at 15% 10%, rgba(120,150,255,0.35), transparent 40%),
+    radial-gradient(circle at 85% 20%, rgba(255,180,220,0.3), transparent 45%),
+    radial-gradient(circle at 30% 80%, rgba(150,220,255,0.3), transparent 45%),
+    radial-gradient(circle at 90% 90%, rgba(190,160,255,0.3), transparent 40%),
+    linear-gradient(160deg, #EEF0FA, #E2E6F5);
+}
+html[data-theme="dark"] body{
+  background:
+    radial-gradient(circle at 20% 0%, rgba(91,125,240,0.22), transparent 45%),
+    radial-gradient(circle at 90% 10%, rgba(140,110,240,0.16), transparent 45%),
+    radial-gradient(circle at 15% 90%, rgba(60,100,200,0.18), transparent 45%),
+    radial-gradient(circle at 85% 95%, rgba(91,125,240,0.12), transparent 40%),
+    linear-gradient(160deg, #0B1120, #161F35, #0B1120);
+}
+html[data-theme="ash"] body{
+  background:
+    radial-gradient(circle at 15% 5%, rgba(124,155,255,0.10), transparent 45%),
+    radial-gradient(circle at 90% 100%, rgba(255,255,255,0.05), transparent 40%),
+    linear-gradient(160deg, #18191A, #242526, #18191A);
+}
+
+/* ---------- Glass surface (cards, pills, panels) ---------- */
+.glass{
+  background:linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0.25));
+  backdrop-filter:blur(20px) saturate(160%);
+  -webkit-backdrop-filter:blur(20px) saturate(160%);
+  border:1px solid rgba(255,255,255,0.6);
+  box-shadow:inset 0 1px 1px rgba(255,255,255,0.8);
+  transition:background 0.1s ease, border-color 0.1s ease, box-shadow 0.1s ease;
+}
+html[data-theme="dark"] .glass,
+html[data-theme="ash"] .glass{
+  background:linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.03));
+  border:1px solid rgba(255,255,255,0.13);
+  box-shadow:inset 0 1px 1px rgba(255,255,255,0.10), 0 4px 20px rgba(0,0,0,0.25);
+}
+
+/* ---------- Topbar (overridden by specificity, not source order) ---------- */
+html[data-theme="dark"] .topbar,
+html[data-theme="ash"] .topbar{
+  background:linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+  border-bottom-color:rgba(255,255,255,0.12);
+  box-shadow:inset 0 1px 1px rgba(255,255,255,0.08);
+}
+
+/* ---------- Bottom nav / cart bar ---------- */
+html[data-theme="dark"] .bottom-nav,
+html[data-theme="ash"] .bottom-nav,
+html[data-theme="dark"] .cart-bar,
+html[data-theme="ash"] .cart-bar{
+  background:linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.03));
+  border-color:rgba(255,255,255,0.13);
+  box-shadow:0 12px 40px rgba(0,0,0,0.45), inset 0 1px 1px rgba(255,255,255,0.10);
+}
+html[data-theme="dark"] .nav-item.active,
+html[data-theme="ash"] .nav-item.active{
+  background:linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06));
+  box-shadow:inset 0 1px 1px rgba(255,255,255,0.15), 0 2px 8px rgba(108,140,255,0.3);
+}
+
+/* ---------- Inputs & search bars ---------- */
+html[data-theme="dark"] input,
+html[data-theme="ash"] input,
+html[data-theme="dark"] select,
+html[data-theme="ash"] select,
+html[data-theme="dark"] .search,
+html[data-theme="ash"] .search{
+  background:rgba(255,255,255,0.06);
+  border-color:rgba(255,255,255,0.14);
+  color:var(--ink);
+}
+
+/* ---------- Theme switcher ---------- */
+.theme-switcher{ position:relative; }
+.theme-toggle{
+  width:34px; height:34px;
+  border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer;
+  font-size:15px;
+}
+.theme-menu{
+  position:absolute;
+  top:calc(100% + 10px);
+  right:0;
+  min-width:180px;
+  border-radius:18px;
+  padding:6px;
+  display:none;
+  flex-direction:column;
+  gap:2px;
+  z-index:50;
+  box-shadow:0 16px 40px rgba(26,29,41,0.18);
+}
+.theme-menu.open{ display:flex; }
+.theme-option{
+  display:flex; align-items:center; gap:10px;
+  padding:10px 12px;
+  border-radius:12px;
+  font-size:13px; font-weight:600;
+  color:var(--ink);
+  cursor:pointer;
+  transition:background 0.15s ease;
+}
+.theme-option:hover{ background:rgba(127,127,127,0.14); }
+.theme-option.active{ color:var(--blue); background:rgba(108,140,255,0.14); }
+.theme-option .swatch{
+  width:20px; height:20px; border-radius:7px; flex-shrink:0;
+  border:1px solid rgba(127,127,127,0.25);
+}
