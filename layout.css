@@ -1,0 +1,67 @@
+/* ============================================================
+   BillOS — Shared Desktop Layout
+   Injects a left sidebar on wide screens (>=1024px) without
+   requiring any per-page HTML restructuring. The sidebar itself
+   is injected by layout.js; this file only styles it and shifts
+   existing page content to make room for it.
+
+   Mobile/tablet (<1024px): untouched, existing bottom-nav layout.
+   Desktop (>=1024px): fixed left sidebar replaces bottom-nav.
+   ============================================================ */
+
+.app-sidebar{ display:none; }
+
+@media (min-width: 1024px){
+
+  /* ---------- Sidebar shell ---------- */
+  .app-sidebar{
+    display:flex;
+    flex-direction:column;
+    position:fixed;
+    top:0; left:0; bottom:0;
+    width:230px;
+    padding:20px 14px;
+    z-index:100;
+    border-radius:0;
+    border-top:none;
+    border-bottom:none;
+    border-left:none;
+  }
+  .app-sidebar-brand{ display:flex; align-items:center; gap:10px; padding:0 6px 24px; }
+  .app-sidebar-logo{
+    width:36px; height:36px;
+    background:linear-gradient(135deg, var(--blue), #6C8CFF);
+    border-radius:10px;
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-weight:800;
+    flex-shrink:0;
+  }
+  .app-sidebar-brand-name{ font-weight:800; font-size:17px; color:var(--ink); }
+
+  .app-sidebar-nav{ display:flex; flex-direction:column; gap:2px; flex:1; }
+  .app-sidebar-link{
+    display:flex; align-items:center; gap:12px;
+    padding:10px 12px; border-radius:10px;
+    color:var(--muted); text-decoration:none;
+    font-size:14px; font-weight:600;
+    transition:background 0.15s ease, color 0.15s ease;
+  }
+  .app-sidebar-link:hover{ background:rgba(127,127,127,0.10); }
+  .app-sidebar-link.active{ background:rgba(59,95,226,0.14); color:var(--blue); }
+  .app-sidebar-icon{ width:20px; text-align:center; flex-shrink:0; }
+
+  .app-sidebar-logout{
+    display:flex; align-items:center; gap:10px;
+    padding:10px 12px; border-radius:10px; margin-top:auto;
+    color:var(--error, #DC2626); font-size:14px; font-weight:700; cursor:pointer;
+    transition:background 0.15s ease;
+  }
+  .app-sidebar-logout:hover{ background:rgba(220,38,38,0.08); }
+
+  /* ---------- Shift existing page content to make room ---------- */
+  body{ margin-left:230px; }
+  .cart-bar{ left:230px; }
+
+  /* Mobile bottom navigation is replaced by the sidebar on desktop */
+  .bottom-nav{ display:none; }
+}
