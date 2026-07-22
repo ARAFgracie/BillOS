@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BillOS — Inventory</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link rel="stylesheet" href="theme.css">
 <script src="theme.js"></script>
 <link rel="stylesheet" href="layout.css">
@@ -138,6 +139,42 @@
   .msg.success{ display:block; background:rgba(231,248,238,0.9); color:var(--green); }
 
   .loading, .no-access{ text-align:center; padding:60px 20px; color:var(--muted); }
+
+  /* ---------- GRN (Bulk Add) ---------- */
+  .head-actions{ display:flex; gap:8px; }
+  .bulk-add-btn{
+    background:rgba(59,95,226,0.12); color:var(--blue); border:none;
+    border-radius:12px; padding:9px 16px; font-weight:700; font-size:13px; cursor:pointer;
+  }
+  .grn-header-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .grn-items-wrap{
+    border:1px solid rgba(0,0,0,0.08); border-radius:14px;
+    padding:12px; margin-bottom:12px; max-height:240px; overflow-y:auto;
+  }
+  .grn-item-row{
+    display:grid; grid-template-columns:2fr 1.1fr 1.1fr auto;
+    gap:8px; align-items:start; margin-bottom:10px;
+  }
+  .grn-item-row:last-child{ margin-bottom:0; }
+  .grn-item-row select, .grn-item-row input{ margin-bottom:6px; font-size:13px; padding:9px 10px; }
+  .grn-new-name{ display:none; }
+  .grn-remove-row{
+    width:30px; height:36px; border-radius:8px; border:none;
+    background:rgba(254,236,236,0.85); color:var(--red); cursor:pointer; font-size:13px;
+  }
+  .add-row-btn{
+    background:rgba(59,95,226,0.1); color:var(--blue); border:none;
+    border-radius:10px; padding:9px 14px; font-weight:700; font-size:12.5px; cursor:pointer;
+    margin-bottom:14px;
+  }
+  .grn-total-row{
+    display:flex; justify-content:space-between; align-items:center;
+    font-weight:800; font-size:15px; padding:10px 2px;
+    border-top:1px solid rgba(0,0,0,0.08); margin-bottom:14px;
+  }
+
+  /* ---------- Return button ---------- */
+  .icon-btn.return{ background:rgba(245,185,66,0.18); color:var(--amber-text); }
 </style>
 </head>
 <body>
@@ -162,7 +199,10 @@
   <div class="content">
     <div class="head-row">
       <h1>Inventory</h1>
-      <button class="add-btn" id="open-add-btn">+ Add</button>
+      <div class="head-actions">
+        <button class="bulk-add-btn" id="open-grn-btn">📥 Bulk Add (GRN)</button>
+        <button class="add-btn" id="open-add-btn">+ Add</button>
+      </div>
     </div>
 
     <div class="stats">
@@ -215,6 +255,65 @@
       <button type="submit" class="save-btn" id="save-btn">Save Product</button>
       <div class="msg" id="form-msg"></div>
       <a href="#" class="cancel-link" id="close-modal">Cancel</a>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================
+     GRN (Goods Receipt Note) — Bulk Add modal
+     ============================================================ -->
+<div class="modal-overlay" id="grn-modal-overlay">
+  <div class="modal">
+    <h3>New GRN (Goods Receipt)</h3>
+    <form id="grn-form">
+      <div class="grn-header-grid">
+        <div>
+          <label for="grn-number">GRN Number</label>
+          <input type="text" id="grn-number" readonly>
+        </div>
+        <div>
+          <label for="grn-date">Date</label>
+          <input type="date" id="grn-date" required>
+        </div>
+      </div>
+      <label for="grn-supplier">Supplier Name</label>
+      <input type="text" id="grn-supplier" placeholder="e.g. ABC Distributors" required>
+
+      <label>Items Received</label>
+      <div class="grn-items-wrap" id="grn-items-wrap"></div>
+      <button type="button" class="add-row-btn" id="grn-add-row-btn">+ Add Row</button>
+
+      <div class="grn-total-row"><span>Total Cost</span><span id="grn-total">৳0.00</span></div>
+
+      <button type="submit" class="save-btn" id="grn-save-btn">Save GRN &amp; Update Stock</button>
+      <div class="msg" id="grn-msg"></div>
+      <a href="#" class="cancel-link" id="grn-close-modal">Cancel</a>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================
+     Return to Supplier modal
+     ============================================================ -->
+<div class="modal-overlay" id="return-modal-overlay">
+  <div class="modal">
+    <h3>Return Product</h3>
+    <form id="return-form">
+      <input type="hidden" id="return-product-id">
+      <label for="return-product-name">Product</label>
+      <input type="text" id="return-product-name" readonly>
+      <label for="return-qty">Quantity to Return</label>
+      <input type="number" id="return-qty" step="0.01" min="0.01" required>
+      <label for="return-reason">Reason</label>
+      <select id="return-reason">
+        <option value="damaged">Damaged</option>
+        <option value="expired">Expired</option>
+        <option value="excess">Excess Stock</option>
+        <option value="other">Other</option>
+      </select>
+      <button type="submit" class="save-btn" id="return-save-btn">Confirm Return</button>
+      <div class="msg" id="return-msg"></div>
+      <a href="#" class="cancel-link" id="return-close-modal">Cancel</a>
     </form>
   </div>
 </div>
@@ -314,6 +413,7 @@
           <div class="t-price">৳${p.price}</div>
           <div class="t-stock">${p.stock_quantity} ${p.unit}</div>
           <div class="t-actions">
+            <button class="icon-btn return" onclick="openReturn('${p.id}')" title="Return to supplier">↩</button>
             <button class="icon-btn glass" onclick="openEdit('${p.id}')">✎</button>
             <button class="icon-btn danger" onclick="deleteProduct('${p.id}')">🗑</button>
           </div>
@@ -394,6 +494,302 @@
     msg.className = 'msg success';
     await loadProducts();
     setTimeout(() => { overlay.classList.remove('open'); }, 600);
+  });
+
+  // ============================================================
+  // GRN (Bulk Add) — Goods Receipt Note
+  // ============================================================
+  const grnOverlay = document.getElementById('grn-modal-overlay');
+  const grnItemsWrap = document.getElementById('grn-items-wrap');
+
+  function productOptionsHtml() {
+    const existing = products
+      .map(p => `<option value="${p.id}">${p.name}${p.code ? ' (#' + p.code + ')' : ''}</option>`)
+      .join('');
+    return `
+      <option value="" disabled selected>Select product...</option>
+      <option value="__new__">+ New Product</option>
+      ${existing}
+    `;
+  }
+
+  function grnRowHtml() {
+    return `
+      <div class="grn-item-row">
+        <div>
+          <select class="grn-row-product" required onchange="onGrnProductChange(this)">
+            ${productOptionsHtml()}
+          </select>
+          <input type="text" class="grn-new-name" placeholder="New product name">
+        </div>
+        <input type="number" class="grn-row-qty" placeholder="Qty" step="0.01" min="0.01" required oninput="updateGrnTotal()">
+        <input type="number" class="grn-row-cost" placeholder="Cost ৳" step="0.01" min="0" required oninput="updateGrnTotal()">
+        <button type="button" class="grn-remove-row" onclick="this.closest('.grn-item-row').remove(); updateGrnTotal();">✕</button>
+      </div>
+    `;
+  }
+
+  window.onGrnProductChange = function(selectEl) {
+    const row = selectEl.closest('.grn-item-row');
+    const newNameInput = row.querySelector('.grn-new-name');
+    if (selectEl.value === '__new__') {
+      newNameInput.style.display = 'block';
+      newNameInput.required = true;
+    } else {
+      newNameInput.style.display = 'none';
+      newNameInput.required = false;
+      newNameInput.value = '';
+    }
+  };
+
+  window.updateGrnTotal = function() {
+    let total = 0;
+    document.querySelectorAll('.grn-item-row').forEach(row => {
+      const qty = parseFloat(row.querySelector('.grn-row-qty').value) || 0;
+      const cost = parseFloat(row.querySelector('.grn-row-cost').value) || 0;
+      total += qty * cost;
+    });
+    document.getElementById('grn-total').textContent = '৳' + total.toFixed(2);
+  };
+
+  function addGrnRow() {
+    grnItemsWrap.insertAdjacentHTML('beforeend', grnRowHtml());
+  }
+
+  document.getElementById('open-grn-btn').addEventListener('click', () => {
+    document.getElementById('grn-form').reset();
+    document.getElementById('grn-number').value = 'GRN-' + Date.now().toString().slice(-8);
+    document.getElementById('grn-date').value = new Date().toISOString().slice(0, 10);
+    grnItemsWrap.innerHTML = '';
+    addGrnRow();
+    updateGrnTotal();
+    document.getElementById('grn-msg').className = 'msg';
+    grnOverlay.classList.add('open');
+  });
+
+  document.getElementById('grn-add-row-btn').addEventListener('click', addGrnRow);
+  document.getElementById('grn-close-modal').addEventListener('click', (e) => {
+    e.preventDefault();
+    grnOverlay.classList.remove('open');
+  });
+
+  function readGrnRows() {
+    const rows = [];
+    document.querySelectorAll('.grn-item-row').forEach(row => {
+      const productId = row.querySelector('.grn-row-product').value;
+      const newName = row.querySelector('.grn-new-name').value.trim();
+      const qty = parseFloat(row.querySelector('.grn-row-qty').value);
+      const cost = parseFloat(row.querySelector('.grn-row-cost').value);
+      rows.push({ productId, newName, qty, cost });
+    });
+    return rows;
+  }
+
+  document.getElementById('grn-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('grn-save-btn');
+    const msg = document.getElementById('grn-msg');
+    btn.disabled = true; btn.textContent = 'Saving...';
+
+    const grnNumber = document.getElementById('grn-number').value;
+    const grnDate = document.getElementById('grn-date').value;
+    const supplierName = document.getElementById('grn-supplier').value;
+    const rows = readGrnRows();
+
+    const invalidRow = rows.find(r => !r.productId || (r.productId === '__new__' && !r.newName) || !r.qty || r.qty <= 0 || isNaN(r.cost) || r.cost < 0);
+    if (invalidRow) {
+      btn.disabled = false; btn.textContent = 'Save GRN & Update Stock';
+      msg.textContent = 'Please fill in every row completely (product, quantity, and cost).';
+      msg.className = 'msg error';
+      return;
+    }
+
+    const totalAmount = rows.reduce((sum, r) => sum + r.qty * r.cost, 0);
+
+    // 1. Create the GRN header
+    const { data: grn, error: grnError } = await sb
+      .from('grns')
+      .insert({
+        shop_id: profile.shop_id,
+        grn_number: grnNumber,
+        supplier_name: supplierName,
+        created_by: profile.id,
+        total_amount: totalAmount,
+        created_at: new Date(grnDate).toISOString()
+      })
+      .select()
+      .single();
+
+    if (grnError) {
+      btn.disabled = false; btn.textContent = 'Save GRN & Update Stock';
+      msg.textContent = 'Failed to create GRN: ' + grnError.message;
+      msg.className = 'msg error';
+      return;
+    }
+
+    // 2. Process each line: update existing stock, or create new product
+    const pdfLines = [];
+    for (const row of rows) {
+      let productId = row.productId;
+      let productName;
+
+      if (productId === '__new__') {
+        const { data: newProduct, error: newProductError } = await sb
+          .from('products')
+          .insert({
+            shop_id: profile.shop_id,
+            name: row.newName,
+            price: row.cost,
+            unit: 'pcs',
+            is_weighted: false,
+            stock_quantity: row.qty
+          })
+          .select()
+          .single();
+
+        if (newProductError) {
+          msg.textContent = 'GRN saved, but a new product failed: ' + newProductError.message;
+          msg.className = 'msg error';
+          continue;
+        }
+        productId = newProduct.id;
+        productName = newProduct.name;
+      } else {
+        const existing = products.find(p => p.id === productId);
+        productName = existing?.name || 'Unknown product';
+        await sb
+          .from('products')
+          .update({ stock_quantity: (existing?.stock_quantity || 0) + row.qty })
+          .eq('id', productId);
+      }
+
+      await sb.from('grn_items').insert({
+        grn_id: grn.id,
+        product_id: productId,
+        product_name: productName,
+        quantity: row.qty,
+        cost_price: row.cost,
+        line_total: row.qty * row.cost
+      });
+
+      pdfLines.push({ name: productName, qty: row.qty, cost: row.cost, total: row.qty * row.cost });
+    }
+
+    btn.disabled = false; btn.textContent = 'Save GRN & Update Stock';
+    msg.textContent = 'GRN saved and stock updated!';
+    msg.className = 'msg success';
+
+    downloadGrnPdf({ grnNumber, grnDate, supplierName, totalAmount, lines: pdfLines });
+
+    await loadProducts();
+    setTimeout(() => { grnOverlay.classList.remove('open'); }, 900);
+  });
+
+  function downloadGrnPdf({ grnNumber, grnDate, supplierName, totalAmount, lines }) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.setFontSize(16);
+    doc.text('Goods Receipt Note (GRN)', 14, 18);
+    doc.setFontSize(10);
+    doc.text('Generated by BillOS', 14, 25);
+
+    doc.setFontSize(11);
+    doc.text('GRN Number: ' + grnNumber, 14, 36);
+    doc.text('Date: ' + grnDate, 14, 43);
+    doc.text('Supplier: ' + supplierName, 14, 50);
+
+    let y = 64;
+    doc.setFontSize(10);
+    doc.text('Product', 14, y);
+    doc.text('Qty', 110, y);
+    doc.text('Cost', 140, y);
+    doc.text('Total', 170, y);
+    y += 4;
+    doc.line(14, y, 196, y);
+    y += 8;
+
+    lines.forEach(line => {
+      doc.text(String(line.name).slice(0, 40), 14, y);
+      doc.text(String(line.qty), 110, y);
+      doc.text('৳' + line.cost.toFixed(2), 140, y);
+      doc.text('৳' + line.total.toFixed(2), 170, y);
+      y += 8;
+    });
+
+    y += 4;
+    doc.line(14, y, 196, y);
+    y += 8;
+    doc.setFontSize(12);
+    doc.text('Total: ৳' + totalAmount.toFixed(2), 140, y);
+
+    doc.save(grnNumber + '.pdf');
+  }
+
+  // ============================================================
+  // Return to Supplier
+  // ============================================================
+  const returnOverlay = document.getElementById('return-modal-overlay');
+
+  window.openReturn = function(productId) {
+    const p = products.find(x => x.id === productId);
+    if (!p) return;
+    document.getElementById('return-form').reset();
+    document.getElementById('return-product-id').value = p.id;
+    document.getElementById('return-product-name').value = p.name + ' (' + p.stock_quantity + ' ' + p.unit + ' in stock)';
+    document.getElementById('return-msg').className = 'msg';
+    returnOverlay.classList.add('open');
+  };
+
+  document.getElementById('return-close-modal').addEventListener('click', (e) => {
+    e.preventDefault();
+    returnOverlay.classList.remove('open');
+  });
+
+  document.getElementById('return-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('return-save-btn');
+    const msg = document.getElementById('return-msg');
+    btn.disabled = true; btn.textContent = 'Processing...';
+
+    const productId = document.getElementById('return-product-id').value;
+    const qty = parseFloat(document.getElementById('return-qty').value);
+    const reason = document.getElementById('return-reason').value;
+    const product = products.find(p => p.id === productId);
+
+    if (!product || qty > product.stock_quantity) {
+      btn.disabled = false; btn.textContent = 'Confirm Return';
+      msg.textContent = 'Cannot return more than the current stock (' + (product?.stock_quantity ?? 0) + ').';
+      msg.className = 'msg error';
+      return;
+    }
+
+    const { error: updateError } = await sb
+      .from('products')
+      .update({ stock_quantity: product.stock_quantity - qty })
+      .eq('id', productId);
+
+    if (updateError) {
+      btn.disabled = false; btn.textContent = 'Confirm Return';
+      msg.textContent = 'Failed: ' + updateError.message;
+      msg.className = 'msg error';
+      return;
+    }
+
+    await sb.from('product_returns').insert({
+      shop_id: profile.shop_id,
+      product_id: productId,
+      quantity: qty,
+      reason,
+      created_by: profile.id
+    });
+
+    btn.disabled = false; btn.textContent = 'Confirm Return';
+    msg.textContent = 'Return recorded and stock updated!';
+    msg.className = 'msg success';
+
+    await loadProducts();
+    setTimeout(() => { returnOverlay.classList.remove('open'); }, 800);
   });
 
   init();
