@@ -51,51 +51,74 @@
   .role-pill{ border-radius:20px; padding:7px 15px; font-size:12px; font-weight:700; text-transform:capitalize; }
 
   /* ============================================================
+  /* ============================================================
      MAIN CONTENT
      ============================================================ */
   .content{
-    flex:1; min-height:0;
-    padding:clamp(10px, 3vh, 22px) 18px;
-    max-width:600px; width:100%; margin:0 auto;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    text-align:center;
-    gap:clamp(10px, 2.2vh, 20px);
+    flex:1; min-height:0; overflow-y:auto;
+    padding:20px 18px 28px;
+    max-width:1200px; width:100%; margin:0 auto;
   }
-  .greeting-block{ display:flex; flex-direction:column; gap:2px; }
-  .greeting-small{ font-size:14px; color:var(--muted); }
-  .shopname{ font-size:13px; color:var(--muted); font-weight:600; }
+  .greeting-block h1{ font-size:22px; margin:0 0 4px; }
+  .greeting-block p{ font-size:13.5px; color:var(--muted); margin:0 0 20px; }
 
-  .stat-row{ display:flex; gap:10px; width:100%; }
-  .stat{ flex:1; border-radius:16px; padding:clamp(10px, 2vh, 14px) 10px; text-align:center; }
-  .stat .num{ font-size:clamp(15px, 3.6vh, 18px); font-weight:800; }
-  .stat .label{ font-size:9.5px; color:var(--muted); margin-top:3px; text-transform:uppercase; letter-spacing:0.3px; }
+  /* ---------- Stat cards ---------- */
+  .stat-row{ display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; margin-bottom:16px; }
+  .stat{ border-radius:20px; padding:18px; display:flex; align-items:flex-start; gap:12px; overflow:hidden; position:relative; }
+  .stat-icon{
+    width:42px; height:42px; border-radius:12px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:18px; color:#fff;
+  }
+  .stat .num{ font-size:20px; font-weight:800; line-height:1.2; }
+  .stat .label{ font-size:10.5px; color:var(--muted); margin-top:2px; text-transform:uppercase; letter-spacing:0.3px; }
+  .stat .trend{ font-size:11px; font-weight:700; margin-top:4px; }
+  .stat .trend.up{ color:var(--green, #10B981); }
+  .stat .trend.down{ color:var(--error); }
+  .stat-wave{ position:absolute; bottom:0; left:0; right:0; opacity:0.5; }
   html[data-theme="dark"] .stat .num,
   html[data-theme="ash"] .stat .num{ text-shadow:0 0 14px var(--glow); }
 
-  .hero{ display:flex; flex-direction:column; align-items:center; }
-  .hero-icon{
-    width:clamp(38px, 8vh, 44px); height:clamp(38px, 8vh, 44px);
-    border-radius:14px;
-    display:flex; align-items:center; justify-content:center;
-    font-size:clamp(16px, 3.5vh, 19px);
-    margin-bottom:clamp(8px, 2vh, 14px);
-    background:linear-gradient(135deg, rgba(34,197,94,0.15), rgba(52,211,153,0.15));
-    border:1px solid rgba(127,127,127,0.2);
-    animation:floaty 3.5s ease-in-out infinite;
+  /* ---------- Two-column panel grids ---------- */
+  .panel-grid{ display:grid; grid-template-columns:1.6fr 1fr; gap:14px; margin-bottom:14px; }
+  @media (max-width: 760px){
+    .panel-grid{ grid-template-columns:1fr; }
+    .stat-row{ grid-template-columns:1fr; }
   }
-  html[data-theme="dark"] .hero-icon,
-  html[data-theme="ash"] .hero-icon{ box-shadow:0 0 24px rgba(52,211,153,0.25); }
-  .hero-text{ font-size:clamp(15px, 3.6vh, 19px); font-weight:700; line-height:1.4; max-width:300px; opacity:0.9; }
-  .hero-word{
-    display:inline-block; opacity:0; transform:translateY(16px);
-    background:linear-gradient(135deg, var(--blue), #8AA4FF, #22C55E);
-    background-size:200% 200%;
-    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
-    animation:wordIn 0.6s ease forwards, shimmer 4s ease-in-out infinite 1.5s;
+  .panel{ border-radius:20px; padding:18px 20px; }
+  .panel-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+  .panel-head h3{ font-size:14.5px; margin:0; }
+  .panel-link{ font-size:11.5px; color:var(--blue); font-weight:700; text-decoration:none; }
+
+  /* ---------- Sales overview chart ---------- */
+  .chart-wrap{ position:relative; }
+  .chart-wrap svg{ width:100%; height:140px; display:block; }
+  .chart-empty{ font-size:12.5px; color:var(--muted); text-align:center; padding:30px 0; }
+
+  /* ---------- Recent sales list ---------- */
+  .recent-row{ display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--border); font-size:13px; }
+  .recent-row:last-child{ border-bottom:none; }
+  .recent-id{ font-weight:700; }
+  .recent-time{ font-size:11px; color:var(--muted); }
+  .recent-amount{ font-weight:800; }
+
+  /* ---------- Top products ---------- */
+  .rank-row{ display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--border); }
+  .rank-row:last-child{ border-bottom:none; }
+  .rank-left{ display:flex; align-items:center; gap:10px; }
+  .rank-icon{ width:34px; height:34px; border-radius:10px; background:rgba(34,197,94,0.12); display:flex; align-items:center; justify-content:center; font-size:15px; }
+  .rank-name{ font-size:13px; font-weight:700; }
+  .rank-sub{ font-size:11px; color:var(--muted); }
+  .rank-amount{ font-size:13px; font-weight:800; color:var(--green, #10B981); }
+
+  /* ---------- Quick actions ---------- */
+  .qa-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .qa-item{
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+    padding:16px 8px; border-radius:14px; border:1px solid var(--border);
+    text-decoration:none; color:var(--ink); font-size:12px; font-weight:700; text-align:center;
   }
-  @keyframes wordIn{ to{ opacity:1; transform:translateY(0); } }
-  @keyframes shimmer{ 0%, 100%{ background-position:0% 50%; } 50%{ background-position:100% 50%; } }
-  @keyframes floaty{ 0%, 100%{ transform:translateY(0); } 50%{ transform:translateY(-6px); } }
+  .qa-icon{ width:34px; height:34px; border-radius:10px; background:rgba(34,197,94,0.12); display:flex; align-items:center; justify-content:center; font-size:15px; }
+
 
   /* ============================================================
      BOTTOM NAVIGATION
@@ -153,19 +176,73 @@
 
   <main class="content">
     <div class="greeting-block">
-      <div class="greeting-small" id="greeting">Welcome</div>
-      <div class="shopname" id="shop-name"></div>
+      <h1 id="greeting">Welcome</h1>
+      <p id="shop-name"></p>
     </div>
 
     <div class="stat-row">
-      <div class="stat glass"><div class="num" id="stat-sales">৳0</div><div class="label">Today's Sales</div></div>
-      <div class="stat glass"><div class="num" id="stat-bills">0</div><div class="label">Bills Today</div></div>
-      <div class="stat glass"><div class="num" id="stat-low" style="color:var(--amber-text)">0</div><div class="label">Low Stock</div></div>
+      <div class="stat glass">
+        <div class="stat-icon" style="background:var(--blue);">৳</div>
+        <div>
+          <div class="num" id="stat-sales">৳0</div>
+          <div class="label">Today's Sales</div>
+          <div class="trend" id="stat-sales-trend"></div>
+        </div>
+      </div>
+      <div class="stat glass">
+        <div class="stat-icon" style="background:#8B5CF6;">🧾</div>
+        <div>
+          <div class="num" id="stat-bills">0</div>
+          <div class="label">Bills Today</div>
+          <div class="trend" id="stat-bills-trend"></div>
+        </div>
+      </div>
+      <div class="stat glass">
+        <div class="stat-icon" style="background:#F59E0B;">📦</div>
+        <div>
+          <div class="num" id="stat-low">0</div>
+          <div class="label">Low Stock</div>
+          <div class="trend" id="stat-low-trend"></div>
+        </div>
+      </div>
     </div>
 
-    <div class="hero">
-      <div class="hero-icon">💳</div>
-      <div class="hero-text" id="hero-text"></div>
+    <div class="panel-grid">
+      <div class="panel glass">
+        <div class="panel-head">
+          <h3>Sales Overview</h3>
+          <span class="panel-link">Last 7 days</span>
+        </div>
+        <div class="chart-wrap" id="chart-wrap">
+          <div class="chart-empty">Loading chart...</div>
+        </div>
+      </div>
+      <div class="panel glass">
+        <div class="panel-head">
+          <h3>Recent Sales</h3>
+          <a href="bills.html" class="panel-link">View All</a>
+        </div>
+        <div id="recent-sales-list"><div class="chart-empty">Loading...</div></div>
+      </div>
+    </div>
+
+    <div class="panel-grid">
+      <div class="panel glass">
+        <div class="panel-head">
+          <h3>Top Products</h3>
+          <a href="analytics.html" class="panel-link">View All</a>
+        </div>
+        <div id="top-products-list"><div class="chart-empty">Loading...</div></div>
+      </div>
+      <div class="panel glass">
+        <div class="panel-head"><h3>Quick Actions</h3></div>
+        <div class="qa-grid">
+          <a href="billing.html" class="qa-item"><div class="qa-icon">🛒</div>New Sale</a>
+          <a href="inventory.html" class="qa-item" id="qa-inventory"><div class="qa-icon">📦</div>Add Product</a>
+          <a href="bills.html" class="qa-item"><div class="qa-icon">🧾</div>View Bills</a>
+          <a href="reports.html" class="qa-item" id="qa-reports"><div class="qa-icon">📈</div>View Reports</a>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -223,59 +300,202 @@
     }
 
     renderProfile(profile);
-    buildHeroText('Manage, maintain and utilize cash flow');
-    await loadStats(profile.shop_id);
     applyRoleVisibility(profile.role);
+
+    await Promise.all([
+      loadStats(profile.shop_id),
+      loadSalesOverview(profile.shop_id),
+      loadRecentSales(profile.shop_id),
+      loadTopProducts(profile.shop_id),
+    ]);
 
     document.getElementById('loading').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
   }
 
   function renderProfile(profile) {
-    document.getElementById('greeting').textContent = 'Welcome, ' + (profile.full_name || 'there');
-    document.getElementById('shop-name').textContent = profile.shops?.name || '';
+    const hour = new Date().getHours();
+    const timeGreeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+    document.getElementById('greeting').textContent = timeGreeting + ', ' + (profile.full_name || 'there');
+    document.getElementById('shop-name').textContent = "Here's what's happening with " + (profile.shops?.name || 'your store') + ' today.';
     document.getElementById('role-pill').textContent = profile.role.replace('_', ' ');
   }
 
   function applyRoleVisibility(role) {
     if (role !== 'sales_executive') return;
-    ['bn-inventory', 'bn-analytics', 'bn-reports'].forEach(id => {
-      document.getElementById(id).classList.add('hidden');
+    ['bn-inventory', 'bn-analytics', 'bn-reports', 'qa-inventory', 'qa-reports'].forEach(id => {
+      document.getElementById(id)?.classList.add('hidden');
     });
   }
 
-  /* ---------- Live stats ---------- */
+  /* ---------- Stat cards (today vs yesterday) ---------- */
   async function loadStats(shopId) {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+    const yesterdayStart = new Date(todayStart); yesterdayStart.setDate(yesterdayStart.getDate() - 1);
 
-    const [invoicesRes, productsRes] = await Promise.all([
-      sb.from('invoices')
-        .select('total_amount')
-        .eq('shop_id', shopId)
-        .gte('created_at', todayStart.toISOString()),
-      sb.from('products')
-        .select('stock_quantity')
-        .eq('shop_id', shopId)
+    const [todayRes, yesterdayRes, productsRes] = await Promise.all([
+      sb.from('invoices').select('total_amount').eq('shop_id', shopId).gte('created_at', todayStart.toISOString()),
+      sb.from('invoices').select('total_amount').eq('shop_id', shopId).gte('created_at', yesterdayStart.toISOString()).lt('created_at', todayStart.toISOString()),
+      sb.from('products').select('stock_quantity').eq('shop_id', shopId),
     ]);
 
-    const invoices = invoicesRes.data || [];
-    const totalSales = invoices.reduce((sum, inv) => sum + Number(inv.total_amount), 0);
-    document.getElementById('stat-sales').textContent = '৳' + totalSales.toFixed(0);
-    document.getElementById('stat-bills').textContent = invoices.length;
+    const today = todayRes.data || [];
+    const yesterday = yesterdayRes.data || [];
+    const todaySales = today.reduce((sum, i) => sum + Number(i.total_amount), 0);
+    const yesterdaySales = yesterday.reduce((sum, i) => sum + Number(i.total_amount), 0);
+
+    document.getElementById('stat-sales').textContent = '৳' + todaySales.toFixed(0);
+    document.getElementById('stat-sales-trend').innerHTML = trendLabel(todaySales, yesterdaySales);
+
+    document.getElementById('stat-bills').textContent = today.length;
+    document.getElementById('stat-bills-trend').innerHTML = trendLabel(today.length, yesterday.length);
 
     const products = productsRes.data || [];
     const lowStockCount = products.filter(p => p.stock_quantity > 0 && p.stock_quantity <= 5).length;
     document.getElementById('stat-low').textContent = lowStockCount;
+    document.getElementById('stat-low-trend').innerHTML = lowStockCount > 0
+      ? '<span style="color:var(--amber-text)">Needs attention</span>'
+      : '<span class="trend up">All stocked</span>';
   }
 
-  /* ---------- Animated hero text ---------- */
-  function buildHeroText(text) {
-    const el = document.getElementById('hero-text');
-    const words = text.split(' ');
-    el.innerHTML = words
-      .map((word, i) => `<span class="hero-word" style="animation-delay:${i * 0.12}s, ${1.5 + i * 0.12}s">${word}</span>`)
-      .join(' ');
+  function trendLabel(current, previous) {
+    if (previous === 0) return current > 0 ? '<span class="trend up">New today</span>' : '';
+    const pct = ((current - previous) / previous) * 100;
+    const sign = pct >= 0 ? '+' : '';
+    const cls = pct >= 0 ? 'up' : 'down';
+    return `<span class="trend ${cls}">${sign}${pct.toFixed(0)}% vs yesterday</span>`;
+  }
+
+  /* ---------- Sales overview (last 7 days) ---------- */
+  async function loadSalesOverview(shopId) {
+    const start = new Date(); start.setDate(start.getDate() - 6); start.setHours(0, 0, 0, 0);
+
+    const { data } = await sb
+      .from('invoices')
+      .select('total_amount, created_at')
+      .eq('shop_id', shopId)
+      .gte('created_at', start.toISOString());
+
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start); d.setDate(d.getDate() + i);
+      days.push({ date: d, total: 0 });
+    }
+    (data || []).forEach(inv => {
+      const invDate = new Date(inv.created_at);
+      const day = days.find(d => d.date.toDateString() === invDate.toDateString());
+      if (day) day.total += Number(inv.total_amount);
+    });
+
+    renderSalesChart(days);
+  }
+
+  function renderSalesChart(days) {
+    const wrap = document.getElementById('chart-wrap');
+    const max = Math.max(...days.map(d => d.total), 1);
+    const w = 600, h = 140, pad = 10;
+    const stepX = (w - pad * 2) / (days.length - 1);
+
+    const points = days.map((d, i) => {
+      const x = pad + i * stepX;
+      const y = h - pad - (d.total / max) * (h - pad * 2);
+      return { x, y };
+    });
+
+    const linePath = points.map((p, i) => (i === 0 ? 'M' : 'L') + p.x + ',' + p.y).join(' ');
+    const areaPath = linePath + ` L${points[points.length - 1].x},${h} L${points[0].x},${h} Z`;
+
+    const peakIndex = days.reduce((best, d, i) => (d.total > days[best].total ? i : best), 0);
+    const peak = points[peakIndex];
+    const peakLabel = days[peakIndex].total > 0
+      ? `<text x="${peak.x}" y="${Math.max(peak.y - 8, 10)}" font-size="10" fill="var(--muted)" text-anchor="middle">৳${days[peakIndex].total.toFixed(0)}</text>`
+      : '';
+
+    wrap.innerHTML = `
+      <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#22C55E" stop-opacity="0.25"/>
+            <stop offset="100%" stop-color="#22C55E" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path d="${areaPath}" fill="url(#areaFill)" />
+        <path d="${linePath}" fill="none" stroke="#22C55E" stroke-width="2.5" />
+        <circle cx="${peak.x}" cy="${peak.y}" r="4" fill="#22C55E" />
+        ${peakLabel}
+      </svg>
+      <div style="display:flex; justify-content:space-between; font-size:10.5px; color:var(--muted); padding:0 4px;">
+        ${days.map(d => `<span>${d.date.toLocaleDateString('en-GB', { weekday: 'short' })}</span>`).join('')}
+      </div>
+    `;
+  }
+
+  /* ---------- Recent sales ---------- */
+  async function loadRecentSales(shopId) {
+    const { data } = await sb
+      .from('invoices')
+      .select('id, total_amount, created_at')
+      .eq('shop_id', shopId)
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    const container = document.getElementById('recent-sales-list');
+    if (!data || !data.length) {
+      container.innerHTML = '<div class="chart-empty">No sales yet.</div>';
+      return;
+    }
+    container.innerHTML = data.map(inv => `
+      <div class="recent-row">
+        <div>
+          <div class="recent-id">#${inv.id.slice(0, 8).toUpperCase()}</div>
+          <div class="recent-time">${new Date(inv.created_at).toLocaleString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
+        </div>
+        <div class="recent-amount">৳${Number(inv.total_amount).toFixed(2)}</div>
+      </div>
+    `).join('');
+  }
+
+  /* ---------- Top products ---------- */
+  async function loadTopProducts(shopId) {
+    const container = document.getElementById('top-products-list');
+    const { data: invoices } = await sb.from('invoices').select('id').eq('shop_id', shopId);
+
+    if (!invoices || !invoices.length) {
+      container.innerHTML = '<div class="chart-empty">No sales data yet.</div>';
+      return;
+    }
+
+    const { data: items } = await sb
+      .from('invoice_items')
+      .select('quantity, line_total, products(name, unit)')
+      .in('invoice_id', invoices.map(i => i.id));
+
+    if (!items || !items.length) {
+      container.innerHTML = '<div class="chart-empty">No sales data yet.</div>';
+      return;
+    }
+
+    const byProduct = {};
+    items.forEach(it => {
+      const name = it.products?.name || 'Unknown';
+      if (!byProduct[name]) byProduct[name] = { name, unit: it.products?.unit || '', qty: 0, revenue: 0 };
+      byProduct[name].qty += Number(it.quantity);
+      byProduct[name].revenue += Number(it.line_total);
+    });
+
+    const ranked = Object.values(byProduct).sort((a, b) => b.revenue - a.revenue).slice(0, 4);
+    container.innerHTML = ranked.map(p => `
+      <div class="rank-row">
+        <div class="rank-left">
+          <div class="rank-icon">📦</div>
+          <div>
+            <div class="rank-name">${p.name}</div>
+            <div class="rank-sub">${p.qty} ${p.unit} sold</div>
+          </div>
+        </div>
+        <div class="rank-amount">৳${p.revenue.toFixed(0)}</div>
+      </div>
+    `).join('');
   }
 
   init();
