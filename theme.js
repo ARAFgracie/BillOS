@@ -11,9 +11,9 @@ const THEME_STORAGE_KEY = 'billos-theme';
    block in theme.css for html[data-theme="value"], and
    (2) adding one entry here. */
 const THEME_OPTIONS = [
-  { value: 'light', label: 'White',        icon: '☀️', swatch: 'linear-gradient(135deg, #F0F3FF, #E2E6F5)' },
-  { value: 'dark',  label: 'Dark Navy',    icon: '🌙', swatch: 'linear-gradient(135deg, #0B1120, #1E293B)' },
-  { value: 'ash',   label: 'Ash Gradient', icon: '🌫️', swatch: 'linear-gradient(135deg, #18191A, #3A3B3C)' },
+  { value: 'light', label: 'White',        icon: '☀️', swatch: 'linear-gradient(135deg, #FFFFFF, #F7F9F8)' },
+  { value: 'dark',  label: 'Dark',         icon: '🌙', swatch: 'linear-gradient(135deg, #0A0F14, #111827)' },
+  { value: 'ash',   label: 'Ash Gradient', icon: '🌫️', swatch: 'linear-gradient(135deg, #111315, #1B1D21)' },
 ];
 
 function applyTheme(theme) {

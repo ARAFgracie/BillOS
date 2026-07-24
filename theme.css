@@ -10,51 +10,51 @@
    ============================================================ */
 
 :root{
-  --blue:#3B5FE2;
-  --blue-dark:#2E4BC4;
-  --ink:#1A1D29;
-  --muted:#5B6270;
+  --blue:#22C55E;
+  --blue-dark:#16A34A;
+  --ink:#111827;
+  --muted:#6B7280;
   --card:#FFFFFF;
-  --border:#E5E7F0;
+  --border:#E5E7EB;
   --error:#DC2626;
-  --success:#16A34A;
-  --green:#16A34A;
-  --amber-bg:#FCEBC5;
-  --amber-text:#B7791F;
-  --glass-bg:rgba(255,255,255,0.55);
-  --glass-bg-strong:rgba(255,255,255,0.75);
-  --glass-border:rgba(255,255,255,0.6);
+  --success:#10B981;
+  --green:#10B981;
+  --amber-bg:#FEF3C7;
+  --amber-text:#B45309;
+  --glass-bg:rgba(255,255,255,0.7);
+  --glass-bg-strong:rgba(255,255,255,0.85);
+  --glass-border:rgba(255,255,255,0.7);
   --glow:transparent;
 }
 
 html[data-theme="dark"]{
-  --blue:#6C8CFF;
-  --blue-dark:#5B7DF0;
-  --ink:#EAECEF;
-  --muted:#96A0B5;
-  --card:rgba(255,255,255,0.07);
-  --border:rgba(255,255,255,0.13);
-  --amber-bg:rgba(245,185,66,0.15);
-  --amber-text:#F5B942;
-  --glass-bg:rgba(255,255,255,0.07);
-  --glass-bg-strong:rgba(255,255,255,0.09);
-  --glass-border:rgba(255,255,255,0.13);
-  --glow:rgba(108,140,255,0.45);
+  --blue:#22C55E;
+  --blue-dark:#16A34A;
+  --ink:#F9FAFB;
+  --muted:#9CA3AF;
+  --card:#111827;
+  --border:#1F2937;
+  --amber-bg:rgba(180,83,9,0.2);
+  --amber-text:#F59E0B;
+  --glass-bg:rgba(255,255,255,0.05);
+  --glass-bg-strong:rgba(255,255,255,0.08);
+  --glass-border:rgba(255,255,255,0.08);
+  --glow:rgba(34,197,94,0.45);
 }
 
 html[data-theme="ash"]{
-  --blue:#7C9BFF;
-  --blue-dark:#6C8CFF;
-  --ink:#E4E6EB;
-  --muted:#B0B3B8;
-  --card:rgba(255,255,255,0.06);
-  --border:rgba(255,255,255,0.10);
-  --amber-bg:rgba(245,185,66,0.15);
-  --amber-text:#F5B942;
-  --glass-bg:rgba(255,255,255,0.06);
-  --glass-bg-strong:rgba(255,255,255,0.08);
-  --glass-border:rgba(255,255,255,0.10);
-  --glow:rgba(255,255,255,0.25);
+  --blue:#34D399;
+  --blue-dark:#22C55E;
+  --ink:#F3F4F6;
+  --muted:#A1A5AC;
+  --card:#1B1D21;
+  --border:rgba(255,255,255,0.08);
+  --amber-bg:rgba(180,83,9,0.2);
+  --amber-text:#F59E0B;
+  --glass-bg:rgba(255,255,255,0.04);
+  --glass-bg-strong:rgba(255,255,255,0.07);
+  --glass-border:rgba(255,255,255,0.07);
+  --glow:rgba(52,211,153,0.35);
 }
 
 /* ---------- Page background ---------- */
@@ -62,50 +62,38 @@ html, body{ margin:0; }
 body{
   color:var(--ink);
   transition:background 0.1s ease, color 0.1s ease;
-  background:
-    radial-gradient(circle at 15% 10%, rgba(120,150,255,0.35), transparent 40%),
-    radial-gradient(circle at 85% 20%, rgba(255,180,220,0.3), transparent 45%),
-    radial-gradient(circle at 30% 80%, rgba(150,220,255,0.3), transparent 45%),
-    radial-gradient(circle at 90% 90%, rgba(190,160,255,0.3), transparent 40%),
-    linear-gradient(160deg, #EEF0FA, #E2E6F5);
+  /* Space POS light: clean, minimal off-white */
+  background:#F7F9F8;
 }
 html[data-theme="dark"] body{
-  background:
-    radial-gradient(circle at 20% 0%, rgba(91,125,240,0.22), transparent 45%),
-    radial-gradient(circle at 90% 10%, rgba(140,110,240,0.16), transparent 45%),
-    radial-gradient(circle at 15% 90%, rgba(60,100,200,0.18), transparent 45%),
-    radial-gradient(circle at 85% 95%, rgba(91,125,240,0.12), transparent 40%),
-    linear-gradient(160deg, #0B1120, #161F35, #0B1120);
+  /* Space POS dark: deep near-black, no gradient blobs */
+  background:#0A0F14;
 }
 html[data-theme="ash"] body{
-  background:
-    radial-gradient(circle at 15% 5%, rgba(124,155,255,0.10), transparent 45%),
-    radial-gradient(circle at 90% 100%, rgba(255,255,255,0.05), transparent 40%),
-    linear-gradient(160deg, #18191A, #242526, #18191A);
+  background:#111315;
 }
 
 /* ---------- Glass surface (cards, pills, panels) ---------- */
 .glass{
-  background:linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0.25));
-  backdrop-filter:blur(20px) saturate(160%);
-  -webkit-backdrop-filter:blur(20px) saturate(160%);
-  border:1px solid rgba(255,255,255,0.6);
-  box-shadow:inset 0 1px 1px rgba(255,255,255,0.8);
+  background:var(--card);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  border:1px solid var(--border);
+  box-shadow:0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.04);
+  border-radius:20px;
   transition:background 0.1s ease, border-color 0.1s ease, box-shadow 0.1s ease;
 }
 html[data-theme="dark"] .glass,
 html[data-theme="ash"] .glass{
-  background:linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.03));
-  border:1px solid rgba(255,255,255,0.13);
-  box-shadow:inset 0 1px 1px rgba(255,255,255,0.10), 0 4px 20px rgba(0,0,0,0.25);
+  box-shadow:0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
 }
 
 /* ---------- Topbar (overridden by specificity, not source order) ---------- */
 html[data-theme="dark"] .topbar,
 html[data-theme="ash"] .topbar{
-  background:linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
-  border-bottom-color:rgba(255,255,255,0.12);
-  box-shadow:inset 0 1px 1px rgba(255,255,255,0.08);
+  background:var(--card);
+  border-bottom-color:var(--border);
+  box-shadow:none;
 }
 
 /* ---------- Bottom nav / cart bar ---------- */
@@ -113,14 +101,14 @@ html[data-theme="dark"] .bottom-nav,
 html[data-theme="ash"] .bottom-nav,
 html[data-theme="dark"] .cart-bar,
 html[data-theme="ash"] .cart-bar{
-  background:linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.03));
-  border-color:rgba(255,255,255,0.13);
-  box-shadow:0 12px 40px rgba(0,0,0,0.45), inset 0 1px 1px rgba(255,255,255,0.10);
+  background:var(--card);
+  border-color:var(--border);
+  box-shadow:0 12px 32px rgba(0,0,0,0.4);
 }
 html[data-theme="dark"] .nav-item.active,
 html[data-theme="ash"] .nav-item.active{
-  background:linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06));
-  box-shadow:inset 0 1px 1px rgba(255,255,255,0.15), 0 2px 8px rgba(108,140,255,0.3);
+  background:rgba(34,197,94,0.14);
+  box-shadow:none;
 }
 
 /* ---------- Inputs & search bars ---------- */
@@ -130,8 +118,8 @@ html[data-theme="dark"] select,
 html[data-theme="ash"] select,
 html[data-theme="dark"] .search,
 html[data-theme="ash"] .search{
-  background:rgba(255,255,255,0.06);
-  border-color:rgba(255,255,255,0.14);
+  background:rgba(255,255,255,0.04);
+  border-color:var(--border);
   color:var(--ink);
 }
 
@@ -155,7 +143,7 @@ html[data-theme="ash"] .search{
   flex-direction:column;
   gap:2px;
   z-index:50;
-  box-shadow:0 16px 40px rgba(26,29,41,0.18);
+  box-shadow:0 16px 40px rgba(0,0,0,0.18);
 }
 .theme-menu.open{ display:flex; }
 .theme-option{
@@ -168,7 +156,7 @@ html[data-theme="ash"] .search{
   transition:background 0.15s ease;
 }
 .theme-option:hover{ background:rgba(127,127,127,0.14); }
-.theme-option.active{ color:var(--blue); background:rgba(108,140,255,0.14); }
+.theme-option.active{ color:var(--blue); background:rgba(34,197,94,0.14); }
 .theme-option .swatch{
   width:20px; height:20px; border-radius:7px; flex-shrink:0;
   border:1px solid rgba(127,127,127,0.25);
