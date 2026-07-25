@@ -11,9 +11,7 @@
 <link rel="stylesheet" href="layout.css">
 <script src="layout.js" defer></script>
 <style>
-  :root{
-    --red:#DC2626;
-  }
+  :root{ --red:#DC2626; }
   *{box-sizing:border-box;}
   body{
     margin:0; min-height:100vh;
@@ -29,6 +27,8 @@
     border-bottom:1px solid rgba(255,255,255,0.6);
     box-shadow:inset 0 1px 1px rgba(255,255,255,0.9), 0 4px 20px rgba(34,197,94,0.06);
   }
+  html[data-theme="dark"] .topbar,
+  html[data-theme="ash"] .topbar{ background:var(--card); box-shadow:none; }
   .brand{ display:flex; align-items:center; gap:10px; }
   .logo{
     width:38px; height:38px; background:linear-gradient(135deg, var(--blue), #34D399);
@@ -38,14 +38,34 @@
   .brand-name{ font-size:18px; font-weight:800; }
   .back-link{ font-size:13px; color:var(--blue); font-weight:700; text-decoration:none; }
 
-  .content{ padding:20px 18px; max-width:600px; margin:0 auto; }
-  .head-row{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+  /* ---------- Full-width content ---------- */
+  .content{ padding:20px 24px 40px; max-width:1100px; margin:0 auto; }
+  .head-row{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
   .head-row h1{ font-size:21px; margin:0; }
-  .add-btn{
+
+  /* ---------- Adjust menu ---------- */
+  .adjust-wrap{ position:relative; }
+  .adjust-btn{
     background:linear-gradient(135deg, var(--blue), #22C55E); color:#fff; border:none;
-    border-radius:12px; padding:9px 16px; font-weight:700; font-size:13px; cursor:pointer;
+    border-radius:12px; padding:9px 18px; font-weight:700; font-size:13px; cursor:pointer;
+    display:flex; align-items:center; gap:6px;
   }
-  .stats{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+  .adjust-menu{
+    position:absolute; top:calc(100% + 8px); right:0; min-width:210px;
+    background:var(--card); border:1px solid var(--border); border-radius:14px;
+    padding:6px; display:none; flex-direction:column; gap:2px; z-index:40;
+    box-shadow:0 16px 40px rgba(0,0,0,0.18);
+  }
+  .adjust-menu.open{ display:flex; }
+  .adjust-option{
+    display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px;
+    font-size:13px; font-weight:600; color:var(--ink); cursor:pointer;
+  }
+  .adjust-option:hover{ background:rgba(127,127,127,0.12); }
+
+  /* ---------- Stat cards ---------- */
+  .stats{ display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; margin-bottom:18px; }
+  @media (max-width: 760px){ .stats{ grid-template-columns:1fr 1fr; } }
   .stat{ border-radius:16px; padding:14px; }
   .stat .num{ font-size:19px; font-weight:800; }
   .stat .label{ font-size:10px; color:var(--muted); margin-top:2px; text-transform:uppercase; letter-spacing:0.3px; }
@@ -58,7 +78,7 @@
   .bar-label{ display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px; }
   .bar-label .name{ font-weight:700; }
   .bar-label .value{ color:var(--blue); font-weight:800; }
-  .bar-track{ height:8px; border-radius:6px; background:rgba(0,0,0,0.06); overflow:hidden; }
+  .bar-track{ height:8px; border-radius:6px; background:rgba(127,127,127,0.15); overflow:hidden; }
   .bar-fill{ height:100%; border-radius:6px; background:linear-gradient(90deg, var(--blue), #34D399); }
 
   .table-wrap{ border-radius:18px; overflow:hidden; }
@@ -66,15 +86,14 @@
     display:grid; grid-template-columns:2fr 1fr 1fr 0.8fr;
     padding:10px 14px; font-size:10.5px; font-weight:800; color:var(--muted);
     text-transform:uppercase; letter-spacing:0.3px;
-    border-bottom:1px solid rgba(0,0,0,0.06);
+    border-bottom:1px solid var(--border);
   }
   .table-row{
     display:grid; grid-template-columns:2fr 1fr 1fr 0.8fr;
     padding:12px 14px; align-items:center;
-    border-bottom:1px solid rgba(0,0,0,0.05);
+    border-bottom:1px solid var(--border);
   }
   .table-row:last-child{ border-bottom:none; }
-  .table-row:nth-child(even){ background:rgba(255,255,255,0.25); }
   .t-name{ font-weight:700; font-size:13px; }
   .t-code{ font-size:10.5px; color:var(--muted); margin-top:2px; }
   .t-price{ font-size:13px; font-weight:600; }
@@ -87,43 +106,40 @@
   }
   .search::placeholder{ color:var(--muted); }
 
-  .product-row{
-    display:flex; align-items:center; justify-content:space-between;
-    border-radius:16px; padding:13px 15px; margin-bottom:9px;
-  }
-  .p-name{ font-weight:700; font-size:14px; }
-  .p-meta{ font-size:11.5px; color:var(--muted); margin-top:2px; }
   .badge{
     display:inline-block; background:var(--amber-bg); color:var(--amber-text);
     font-size:10px; font-weight:800; padding:2px 7px; border-radius:20px; margin-left:6px;
   }
-  .badge.out{ background:rgba(254,236,236,0.9); color:var(--red); }
-  .row-actions{ display:flex; gap:7px; }
+  .badge.out{ background:rgba(220,38,38,0.15); color:var(--red); }
   .icon-btn{
     width:28px; height:28px; border-radius:8px; border:1px solid var(--glass-border);
-    background:rgba(255,255,255,0.6); cursor:pointer; font-size:12px;
+    background:rgba(127,127,127,0.08); cursor:pointer; font-size:12px; color:var(--ink);
   }
-  .icon-btn.danger{ background:rgba(254,236,236,0.8); color:var(--red); }
+  .icon-btn.danger{ background:rgba(220,38,38,0.12); color:var(--red); }
 
   .empty-card{ border-radius:16px; padding:24px; text-align:center; color:var(--muted); font-size:13px; }
 
+  /* ---------- Modal (theme-aware, 80vh bottom sheet) ---------- */
   .modal-overlay{
-    position:fixed; inset:0; background:rgba(26,29,41,0.35); backdrop-filter:blur(4px);
+    position:fixed; inset:0; background:rgba(0,0,0,0.4); backdrop-filter:blur(4px);
     display:none; align-items:flex-end; justify-content:center; z-index:20;
   }
   .modal-overlay.open{ display:flex; }
   .modal{
-    background:rgba(255,255,255,0.85);
-    backdrop-filter:blur(30px) saturate(180%); -webkit-backdrop-filter:blur(30px) saturate(180%);
-    border:1px solid var(--glass-border);
-    border-radius:24px 24px 0 0; padding:22px 20px 26px;
-    width:100%; max-width:600px; max-height:85vh; overflow-y:auto;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:24px 24px 0 0; padding:20px 20px 24px;
+    width:100%; max-width:760px; height:80vh; max-height:80vh;
+    display:flex; flex-direction:column;
   }
-  .modal h3{ margin:0 0 16px; }
+  .modal h3{ margin:0 0 16px; flex-shrink:0; }
+  .modal-scroll{ flex:1; min-height:0; overflow-y:auto; }
+  .modal-footer{ flex-shrink:0; padding-top:12px; }
   label{ display:block; font-size:11px; font-weight:700; color:var(--muted); margin-bottom:5px; text-transform:uppercase; }
   input, select{
     width:100%; padding:11px 13px; margin-bottom:13px; border-radius:12px;
-    border:1px solid rgba(0,0,0,0.08); background:rgba(255,255,255,0.7); font-size:14px; outline:none;
+    border:1px solid var(--border); background:rgba(127,127,127,0.06); color:var(--ink);
+    font-size:14px; outline:none;
   }
   input:focus, select:focus{ border-color:var(--blue); }
   .checkbox-row{ display:flex; align-items:center; gap:8px; margin-bottom:13px; }
@@ -135,46 +151,41 @@
   }
   .cancel-link{ display:block; text-align:center; margin-top:12px; color:var(--muted); font-size:13px; }
   .msg{ margin-top:12px; font-size:13px; padding:9px; border-radius:10px; display:none; }
-  .msg.error{ display:block; background:rgba(254,236,236,0.9); color:var(--red); }
-  .msg.success{ display:block; background:rgba(231,248,238,0.9); color:var(--green); }
+  .msg.error{ display:block; background:rgba(220,38,38,0.12); color:var(--red); }
+  .msg.success{ display:block; background:rgba(16,185,129,0.14); color:var(--green); }
 
   .loading, .no-access{ text-align:center; padding:60px 20px; color:var(--muted); }
 
-  /* ---------- GRN (Bulk Add) ---------- */
-  .head-actions{ display:flex; gap:8px; }
-  .bulk-add-btn{
-    background:rgba(34,197,94,0.12); color:var(--blue); border:none;
-    border-radius:12px; padding:9px 16px; font-weight:700; font-size:13px; cursor:pointer;
-  }
+  /* ---------- GRN — excel-sheet style table ---------- */
   .grn-header-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-  .grn-items-wrap{
-    border:1px solid rgba(0,0,0,0.08); border-radius:14px;
-    padding:12px; margin-bottom:12px; max-height:240px; overflow-y:auto;
+  .grn-table{ width:100%; border-collapse:collapse; margin-bottom:10px; font-size:12.5px; }
+  .grn-table th{
+    text-align:left; font-size:10px; font-weight:800; text-transform:uppercase; color:var(--muted);
+    padding:6px 6px; border-bottom:2px solid var(--border);
   }
-  .grn-item-row{
-    display:grid; grid-template-columns:2fr 1.1fr 1.1fr auto;
-    gap:8px; align-items:start; margin-bottom:10px;
+  .grn-table td{
+    padding:5px 4px; border-bottom:1px solid var(--border); vertical-align:top;
   }
-  .grn-item-row:last-child{ margin-bottom:0; }
-  .grn-item-row select, .grn-item-row input{ margin-bottom:6px; font-size:13px; padding:9px 10px; }
-  .grn-new-name{ display:none; }
+  .grn-table tr:nth-child(even) td{ background:rgba(127,127,127,0.04); }
+  .grn-table input, .grn-table select{
+    margin-bottom:4px; padding:8px 8px; font-size:12.5px; border-radius:8px;
+  }
+  .grn-new-name, .grn-row-code{ display:none; }
   .grn-remove-row{
-    width:30px; height:36px; border-radius:8px; border:none;
-    background:rgba(254,236,236,0.85); color:var(--red); cursor:pointer; font-size:13px;
+    width:26px; height:32px; border-radius:8px; border:none;
+    background:rgba(220,38,38,0.15); color:var(--red); cursor:pointer; font-size:12px;
   }
   .add-row-btn{
-    background:rgba(34,197,94,0.1); color:var(--blue); border:none;
+    background:rgba(34,197,94,0.12); color:var(--blue); border:none;
     border-radius:10px; padding:9px 14px; font-weight:700; font-size:12.5px; cursor:pointer;
     margin-bottom:14px;
   }
   .grn-total-row{
     display:flex; justify-content:space-between; align-items:center;
     font-weight:800; font-size:15px; padding:10px 2px;
-    border-top:1px solid rgba(0,0,0,0.08); margin-bottom:14px;
+    border-top:1px solid var(--border);
   }
-
-  /* ---------- Return button ---------- */
-  .icon-btn.return{ background:rgba(245,185,66,0.18); color:var(--amber-text); }
+  .grn-hint{ font-size:11px; color:var(--muted); margin:-4px 0 12px; }
 </style>
 </head>
 <body>
@@ -199,9 +210,13 @@
   <div class="content">
     <div class="head-row">
       <h1>Inventory</h1>
-      <div class="head-actions">
-        <button class="bulk-add-btn" id="open-grn-btn">📥 Bulk Add (GRN)</button>
-        <button class="add-btn" id="open-add-btn">+ Add</button>
+      <div class="adjust-wrap">
+        <button class="adjust-btn" id="adjust-btn">Adjust ▾</button>
+        <div class="adjust-menu" id="adjust-menu">
+          <div class="adjust-option" onclick="openGrn()">📥 GRN (Bulk Add)</div>
+          <div class="adjust-option" onclick="openReturn()">↩ Return to Supplier</div>
+          <div class="adjust-option" onclick="openDamage()">⚠ Damage / Loss</div>
+        </div>
       </div>
     </div>
 
@@ -229,65 +244,88 @@
 
 <div id="no-access" class="no-access" style="display:none;">Only Owners and Authority can manage inventory.</div>
 
+<!-- ============================================================
+     Edit Product modal
+     ============================================================ -->
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal">
-    <h3 id="modal-title">Add Product</h3>
-    <form id="product-form">
-      <input type="hidden" id="product-id">
-      <label for="f-name">Name</label>
-      <input type="text" id="f-name" required>
-      <label for="f-code">Product Code (SKU / Barcode)</label>
-      <input type="text" id="f-code" placeholder="e.g. 22077">
-      <label for="f-price">Price (৳)</label>
-      <input type="number" id="f-price" step="0.01" required>
-      <label for="f-unit">Unit</label>
-      <select id="f-unit">
-        <option value="pcs">pcs</option>
-        <option value="kg">kg</option>
-        <option value="g">g</option>
-      </select>
-      <div class="checkbox-row">
-        <input type="checkbox" id="f-weighted">
-        <label for="f-weighted" style="margin:0; text-transform:none; font-weight:600;">This is a weighted item</label>
+    <h3>Edit Product</h3>
+    <form id="product-form" style="display:flex; flex-direction:column; min-height:0; flex:1;">
+      <div class="modal-scroll">
+        <input type="hidden" id="product-id">
+        <label for="f-name">Name</label>
+        <input type="text" id="f-name" required>
+        <label for="f-code">Product Code (SKU / Barcode)</label>
+        <input type="text" id="f-code" placeholder="e.g. 22077">
+        <label for="f-price">Price (৳)</label>
+        <input type="number" id="f-price" step="0.01" required>
+        <label for="f-unit">Unit</label>
+        <select id="f-unit">
+          <option value="pcs">pcs</option>
+          <option value="kg">kg</option>
+          <option value="g">g</option>
+        </select>
+        <div class="checkbox-row">
+          <input type="checkbox" id="f-weighted">
+          <label for="f-weighted" style="margin:0; text-transform:none; font-weight:600;">This is a weighted item</label>
+        </div>
+        <label for="f-stock">Stock Quantity</label>
+        <input type="number" id="f-stock" step="0.01" required>
       </div>
-      <label for="f-stock">Stock Quantity</label>
-      <input type="number" id="f-stock" step="0.01" required>
-      <button type="submit" class="save-btn" id="save-btn">Save Product</button>
-      <div class="msg" id="form-msg"></div>
-      <a href="#" class="cancel-link" id="close-modal">Cancel</a>
+      <div class="modal-footer">
+        <button type="submit" class="save-btn" id="save-btn">Save Product</button>
+        <div class="msg" id="form-msg"></div>
+        <a href="#" class="cancel-link" id="close-modal">Cancel</a>
+      </div>
     </form>
   </div>
 </div>
 
 <!-- ============================================================
-     GRN (Goods Receipt Note) — Bulk Add modal
+     GRN (Goods Receipt Note) — Bulk Add modal, excel-sheet style
      ============================================================ -->
 <div class="modal-overlay" id="grn-modal-overlay">
   <div class="modal">
     <h3>New GRN (Goods Receipt)</h3>
-    <form id="grn-form">
-      <div class="grn-header-grid">
-        <div>
-          <label for="grn-number">GRN Number</label>
-          <input type="text" id="grn-number" readonly>
+    <form id="grn-form" style="display:flex; flex-direction:column; min-height:0; flex:1;">
+      <div class="modal-scroll">
+        <div class="grn-header-grid">
+          <div>
+            <label for="grn-number">GRN Number</label>
+            <input type="text" id="grn-number" readonly>
+          </div>
+          <div>
+            <label for="grn-date">Date</label>
+            <input type="date" id="grn-date" required>
+          </div>
         </div>
-        <div>
-          <label for="grn-date">Date</label>
-          <input type="date" id="grn-date" required>
-        </div>
+        <label for="grn-supplier">Default Supplier</label>
+        <input type="text" id="grn-supplier" placeholder="e.g. ABC Distributors" required>
+        <div class="grn-hint">Different item from a different supplier? Override it in that row's Supplier cell.</div>
+
+        <label>Items Received</label>
+        <table class="grn-table">
+          <thead>
+            <tr>
+              <th style="width:26%;">Product</th>
+              <th style="width:14%;">Code</th>
+              <th style="width:12%;">Qty</th>
+              <th style="width:14%;">Cost ৳</th>
+              <th style="width:22%;">Supplier (override)</th>
+              <th style="width:6%;"></th>
+            </tr>
+          </thead>
+          <tbody id="grn-items-wrap"></tbody>
+        </table>
+        <button type="button" class="add-row-btn" id="grn-add-row-btn">+ Add Row</button>
+
+        <div class="grn-total-row"><span>Total Cost</span><span id="grn-total">৳0.00</span></div>
       </div>
-      <label for="grn-supplier">Supplier Name</label>
-      <input type="text" id="grn-supplier" placeholder="e.g. ABC Distributors" required>
-
-      <label>Items Received</label>
-      <div class="grn-items-wrap" id="grn-items-wrap"></div>
-      <button type="button" class="add-row-btn" id="grn-add-row-btn">+ Add Row</button>
-
-      <div class="grn-total-row"><span>Total Cost</span><span id="grn-total">৳0.00</span></div>
-
-      <button type="submit" class="save-btn" id="grn-save-btn">Save GRN &amp; Update Stock</button>
-      <div class="msg" id="grn-msg"></div>
-      <a href="#" class="cancel-link" id="grn-close-modal">Cancel</a>
+      <div class="modal-footer">
+        <button type="submit" class="save-btn" id="grn-save-btn">Save GRN &amp; Update Stock</button>
+        <div class="msg" id="grn-msg"></div>
+        <a href="#" class="cancel-link" id="grn-close-modal">Cancel</a>
+      </div>
     </form>
   </div>
 </div>
@@ -297,23 +335,54 @@
      ============================================================ -->
 <div class="modal-overlay" id="return-modal-overlay">
   <div class="modal">
-    <h3>Return Product</h3>
-    <form id="return-form">
-      <input type="hidden" id="return-product-id">
-      <label for="return-product-name">Product</label>
-      <input type="text" id="return-product-name" readonly>
-      <label for="return-qty">Quantity to Return</label>
-      <input type="number" id="return-qty" step="0.01" min="0.01" required>
-      <label for="return-reason">Reason</label>
-      <select id="return-reason">
-        <option value="damaged">Damaged</option>
-        <option value="expired">Expired</option>
-        <option value="excess">Excess Stock</option>
-        <option value="other">Other</option>
-      </select>
-      <button type="submit" class="save-btn" id="return-save-btn">Confirm Return</button>
-      <div class="msg" id="return-msg"></div>
-      <a href="#" class="cancel-link" id="return-close-modal">Cancel</a>
+    <h3>Return Product to Supplier</h3>
+    <form id="return-form" style="display:flex; flex-direction:column; min-height:0; flex:1;">
+      <div class="modal-scroll">
+        <label for="return-product">Product</label>
+        <select id="return-product" required></select>
+        <label for="return-qty">Quantity to Return</label>
+        <input type="number" id="return-qty" step="0.01" min="0.01" required>
+        <label for="return-reason">Reason</label>
+        <select id="return-reason">
+          <option value="excess">Excess Stock</option>
+          <option value="wrong_item">Wrong Item Delivered</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="save-btn" id="return-save-btn">Confirm Return</button>
+        <div class="msg" id="return-msg"></div>
+        <a href="#" class="cancel-link" id="return-close-modal">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================
+     Damage / Loss modal
+     ============================================================ -->
+<div class="modal-overlay" id="damage-modal-overlay">
+  <div class="modal">
+    <h3>Record Damage / Loss</h3>
+    <form id="damage-form" style="display:flex; flex-direction:column; min-height:0; flex:1;">
+      <div class="modal-scroll">
+        <label for="damage-product">Product</label>
+        <select id="damage-product" required></select>
+        <label for="damage-qty">Quantity Lost</label>
+        <input type="number" id="damage-qty" step="0.01" min="0.01" required>
+        <label for="damage-reason">Reason</label>
+        <select id="damage-reason">
+          <option value="damaged">Damaged</option>
+          <option value="expired">Expired</option>
+          <option value="broken">Broken in Handling</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="save-btn" id="damage-save-btn" style="background:linear-gradient(135deg, var(--red), #EF4444);">Confirm Loss</button>
+        <div class="msg" id="damage-msg"></div>
+        <a href="#" class="cancel-link" id="damage-close-modal">Cancel</a>
+      </div>
     </form>
   </div>
 </div>
@@ -396,7 +465,7 @@
   function renderProducts(list) {
     const container = document.getElementById('product-list');
     if (!list.length) {
-      container.innerHTML = '<div class="empty-card">No products yet. Tap "+ Add" to create your first one.</div>';
+      container.innerHTML = '<div class="empty-card">No products yet. Use "Adjust ▾ → GRN" to receive your first stock.</div>';
       return;
     }
     container.innerHTML = list.map(p => {
@@ -413,7 +482,6 @@
           <div class="t-price">৳${p.price}</div>
           <div class="t-stock">${p.stock_quantity} ${p.unit}</div>
           <div class="t-actions">
-            <button class="icon-btn return" onclick="openReturn('${p.id}')" title="Return to supplier">↩</button>
             <button class="icon-btn glass" onclick="openEdit('${p.id}')">✎</button>
             <button class="icon-btn danger" onclick="deleteProduct('${p.id}')">🗑</button>
           </div>
@@ -427,22 +495,25 @@
     renderProducts(products.filter(p => p.name.toLowerCase().includes(q) || (p.code || '').toLowerCase().includes(q)));
   });
 
-  const overlay = document.getElementById('modal-overlay');
-  document.getElementById('open-add-btn').addEventListener('click', () => openAdd());
-  document.getElementById('close-modal').addEventListener('click', (e) => { e.preventDefault(); overlay.classList.remove('open'); });
+  // ============================================================
+  // Adjust ▾ menu
+  // ============================================================
+  const adjustBtn = document.getElementById('adjust-btn');
+  const adjustMenu = document.getElementById('adjust-menu');
+  adjustBtn.addEventListener('click', () => adjustMenu.classList.toggle('open'));
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.adjust-wrap')) adjustMenu.classList.remove('open');
+  });
 
-  function openAdd() {
-    document.getElementById('modal-title').textContent = 'Add Product';
-    document.getElementById('product-form').reset();
-    document.getElementById('product-id').value = '';
-    document.getElementById('form-msg').className = 'msg';
-    overlay.classList.add('open');
-  }
+  // ============================================================
+  // Edit Product
+  // ============================================================
+  const overlay = document.getElementById('modal-overlay');
+  document.getElementById('close-modal').addEventListener('click', (e) => { e.preventDefault(); overlay.classList.remove('open'); });
 
   window.openEdit = function(id) {
     const p = products.find(x => x.id === id);
     if (!p) return;
-    document.getElementById('modal-title').textContent = 'Edit Product';
     document.getElementById('product-id').value = p.id;
     document.getElementById('f-name').value = p.name;
     document.getElementById('f-code').value = p.code || '';
@@ -478,9 +549,7 @@
       shop_id: profile.shop_id
     };
 
-    let result = id
-      ? await sb.from('products').update(payload).eq('id', id)
-      : await sb.from('products').insert(payload);
+    const result = await sb.from('products').update(payload).eq('id', id);
 
     btn.disabled = false; btn.textContent = 'Save Product';
 
@@ -515,30 +584,41 @@
 
   function grnRowHtml() {
     return `
-      <div class="grn-item-row">
-        <div>
+      <tr class="grn-item-row">
+        <td>
           <select class="grn-row-product" required onchange="onGrnProductChange(this)">
             ${productOptionsHtml()}
           </select>
           <input type="text" class="grn-new-name" placeholder="New product name">
-        </div>
-        <input type="number" class="grn-row-qty" placeholder="Qty" step="0.01" min="0.01" required oninput="updateGrnTotal()">
-        <input type="number" class="grn-row-cost" placeholder="Cost ৳" step="0.01" min="0" required oninput="updateGrnTotal()">
-        <button type="button" class="grn-remove-row" onclick="this.closest('.grn-item-row').remove(); updateGrnTotal();">✕</button>
-      </div>
+        </td>
+        <td><input type="text" class="grn-row-code" placeholder="Code"></td>
+        <td><input type="number" class="grn-row-qty" placeholder="0" step="0.01" min="0.01" required oninput="updateGrnTotal()"></td>
+        <td><input type="number" class="grn-row-cost" placeholder="0.00" step="0.01" min="0" required oninput="updateGrnTotal()"></td>
+        <td><input type="text" class="grn-row-supplier" placeholder="(default)"></td>
+        <td><button type="button" class="grn-remove-row" onclick="this.closest('tr').remove(); updateGrnTotal();">✕</button></td>
+      </tr>
     `;
   }
 
   window.onGrnProductChange = function(selectEl) {
-    const row = selectEl.closest('.grn-item-row');
+    const row = selectEl.closest('tr');
     const newNameInput = row.querySelector('.grn-new-name');
+    const codeInput = row.querySelector('.grn-row-code');
+
     if (selectEl.value === '__new__') {
       newNameInput.style.display = 'block';
       newNameInput.required = true;
+      codeInput.style.display = 'block';
+      codeInput.value = '';
+      codeInput.readOnly = false;
     } else {
       newNameInput.style.display = 'none';
       newNameInput.required = false;
       newNameInput.value = '';
+      const existing = products.find(p => p.id === selectEl.value);
+      codeInput.style.display = 'block';
+      codeInput.value = existing?.code || '';
+      codeInput.readOnly = true;
     }
   };
 
@@ -556,7 +636,8 @@
     grnItemsWrap.insertAdjacentHTML('beforeend', grnRowHtml());
   }
 
-  document.getElementById('open-grn-btn').addEventListener('click', () => {
+  window.openGrn = function() {
+    adjustMenu.classList.remove('open');
     document.getElementById('grn-form').reset();
     document.getElementById('grn-number').value = 'GRN-' + Date.now().toString().slice(-8);
     document.getElementById('grn-date').value = new Date().toISOString().slice(0, 10);
@@ -565,7 +646,7 @@
     updateGrnTotal();
     document.getElementById('grn-msg').className = 'msg';
     grnOverlay.classList.add('open');
-  });
+  };
 
   document.getElementById('grn-add-row-btn').addEventListener('click', addGrnRow);
   document.getElementById('grn-close-modal').addEventListener('click', (e) => {
@@ -576,11 +657,14 @@
   function readGrnRows() {
     const rows = [];
     document.querySelectorAll('.grn-item-row').forEach(row => {
-      const productId = row.querySelector('.grn-row-product').value;
-      const newName = row.querySelector('.grn-new-name').value.trim();
-      const qty = parseFloat(row.querySelector('.grn-row-qty').value);
-      const cost = parseFloat(row.querySelector('.grn-row-cost').value);
-      rows.push({ productId, newName, qty, cost });
+      rows.push({
+        productId: row.querySelector('.grn-row-product').value,
+        newName: row.querySelector('.grn-new-name').value.trim(),
+        code: row.querySelector('.grn-row-code').value.trim(),
+        qty: parseFloat(row.querySelector('.grn-row-qty').value),
+        cost: parseFloat(row.querySelector('.grn-row-cost').value),
+        supplier: row.querySelector('.grn-row-supplier').value.trim(),
+      });
     });
     return rows;
   }
@@ -593,7 +677,7 @@
 
     const grnNumber = document.getElementById('grn-number').value;
     const grnDate = document.getElementById('grn-date').value;
-    const supplierName = document.getElementById('grn-supplier').value;
+    const defaultSupplier = document.getElementById('grn-supplier').value;
     const rows = readGrnRows();
 
     const invalidRow = rows.find(r => !r.productId || (r.productId === '__new__' && !r.newName) || !r.qty || r.qty <= 0 || isNaN(r.cost) || r.cost < 0);
@@ -606,13 +690,12 @@
 
     const totalAmount = rows.reduce((sum, r) => sum + r.qty * r.cost, 0);
 
-    // 1. Create the GRN header
     const { data: grn, error: grnError } = await sb
       .from('grns')
       .insert({
         shop_id: profile.shop_id,
         grn_number: grnNumber,
-        supplier_name: supplierName,
+        supplier_name: defaultSupplier,
         created_by: profile.id,
         total_amount: totalAmount,
         created_at: new Date(grnDate).toISOString()
@@ -627,40 +710,56 @@
       return;
     }
 
-    // 2. Process each line: update existing stock, or create new product
+    const createdThisGrnByCode = {};
     const pdfLines = [];
+
     for (const row of rows) {
       let productId = row.productId;
       let productName;
+      const rowSupplier = row.supplier || defaultSupplier;
 
       if (productId === '__new__') {
-        const { data: newProduct, error: newProductError } = await sb
-          .from('products')
-          .insert({
-            shop_id: profile.shop_id,
-            name: row.newName,
-            price: row.cost,
-            unit: 'pcs',
-            is_weighted: false,
-            stock_quantity: row.qty
-          })
-          .select()
-          .single();
+        const typedCode = row.code ? row.code.toLowerCase() : '';
+        const matchedExisting = typedCode
+          ? (products.find(p => (p.code || '').toLowerCase() === typedCode) || createdThisGrnByCode[typedCode])
+          : null;
 
-        if (newProductError) {
-          msg.textContent = 'GRN saved, but a new product failed: ' + newProductError.message;
-          msg.className = 'msg error';
-          continue;
+        if (matchedExisting) {
+          productId = matchedExisting.id;
+          productName = matchedExisting.name;
+          const currentStock = matchedExisting.stock_quantity ?? 0;
+          await sb.from('products').update({ stock_quantity: currentStock + row.qty }).eq('id', productId);
+          matchedExisting.stock_quantity = currentStock + row.qty;
+        } else {
+          const { data: newProduct, error: newProductError } = await sb
+            .from('products')
+            .insert({
+              shop_id: profile.shop_id,
+              name: row.newName,
+              code: row.code || null,
+              price: row.cost,
+              unit: 'pcs',
+              is_weighted: false,
+              stock_quantity: row.qty
+            })
+            .select()
+            .single();
+
+          if (newProductError) {
+            msg.textContent = 'GRN saved, but a new product failed: ' + newProductError.message;
+            msg.className = 'msg error';
+            continue;
+          }
+          productId = newProduct.id;
+          productName = newProduct.name;
+          if (row.code) createdThisGrnByCode[row.code.toLowerCase()] = newProduct;
         }
-        productId = newProduct.id;
-        productName = newProduct.name;
       } else {
         const existing = products.find(p => p.id === productId);
         productName = existing?.name || 'Unknown product';
-        await sb
-          .from('products')
-          .update({ stock_quantity: (existing?.stock_quantity || 0) + row.qty })
-          .eq('id', productId);
+        const currentStock = existing?.stock_quantity ?? 0;
+        await sb.from('products').update({ stock_quantity: currentStock + row.qty }).eq('id', productId);
+        if (existing) existing.stock_quantity = currentStock + row.qty;
       }
 
       await sb.from('grn_items').insert({
@@ -669,23 +768,24 @@
         product_name: productName,
         quantity: row.qty,
         cost_price: row.cost,
-        line_total: row.qty * row.cost
+        line_total: row.qty * row.cost,
+        supplier_name: row.supplier || null
       });
 
-      pdfLines.push({ name: productName, qty: row.qty, cost: row.cost, total: row.qty * row.cost });
+      pdfLines.push({ name: productName, qty: row.qty, cost: row.cost, total: row.qty * row.cost, supplier: rowSupplier });
     }
 
     btn.disabled = false; btn.textContent = 'Save GRN & Update Stock';
     msg.textContent = 'GRN saved and stock updated!';
     msg.className = 'msg success';
 
-    downloadGrnPdf({ grnNumber, grnDate, supplierName, totalAmount, lines: pdfLines });
+    downloadGrnPdf({ grnNumber, grnDate, defaultSupplier, totalAmount, lines: pdfLines });
 
     await loadProducts();
     setTimeout(() => { grnOverlay.classList.remove('open'); }, 900);
   });
 
-  function downloadGrnPdf({ grnNumber, grnDate, supplierName, totalAmount, lines }) {
+  function downloadGrnPdf({ grnNumber, grnDate, defaultSupplier, totalAmount, lines }) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
@@ -697,23 +797,25 @@
     doc.setFontSize(11);
     doc.text('GRN Number: ' + grnNumber, 14, 36);
     doc.text('Date: ' + grnDate, 14, 43);
-    doc.text('Supplier: ' + supplierName, 14, 50);
+    doc.text('Default Supplier: ' + defaultSupplier, 14, 50);
 
     let y = 64;
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.text('Product', 14, y);
-    doc.text('Qty', 110, y);
-    doc.text('Cost', 140, y);
-    doc.text('Total', 170, y);
+    doc.text('Supplier', 90, y);
+    doc.text('Qty', 140, y);
+    doc.text('Cost', 160, y);
+    doc.text('Total', 180, y);
     y += 4;
     doc.line(14, y, 196, y);
     y += 8;
 
     lines.forEach(line => {
-      doc.text(String(line.name).slice(0, 40), 14, y);
-      doc.text(String(line.qty), 110, y);
-      doc.text('৳' + line.cost.toFixed(2), 140, y);
-      doc.text('৳' + line.total.toFixed(2), 170, y);
+      doc.text(String(line.name).slice(0, 30), 14, y);
+      doc.text(String(line.supplier || '').slice(0, 20), 90, y);
+      doc.text(String(line.qty), 140, y);
+      doc.text('৳' + line.cost.toFixed(2), 160, y);
+      doc.text('৳' + line.total.toFixed(2), 180, y);
       y += 8;
     });
 
@@ -721,7 +823,7 @@
     doc.line(14, y, 196, y);
     y += 8;
     doc.setFontSize(12);
-    doc.text('Total: ৳' + totalAmount.toFixed(2), 140, y);
+    doc.text('Total: ৳' + totalAmount.toFixed(2), 160, y);
 
     doc.save(grnNumber + '.pdf');
   }
@@ -731,12 +833,12 @@
   // ============================================================
   const returnOverlay = document.getElementById('return-modal-overlay');
 
-  window.openReturn = function(productId) {
-    const p = products.find(x => x.id === productId);
-    if (!p) return;
+  window.openReturn = function() {
+    adjustMenu.classList.remove('open');
     document.getElementById('return-form').reset();
-    document.getElementById('return-product-id').value = p.id;
-    document.getElementById('return-product-name').value = p.name + ' (' + p.stock_quantity + ' ' + p.unit + ' in stock)';
+    document.getElementById('return-product').innerHTML = products
+      .map(p => `<option value="${p.id}">${p.name}${p.code ? ' (#' + p.code + ')' : ''}</option>`)
+      .join('') || '<option value="" disabled selected>No products yet</option>';
     document.getElementById('return-msg').className = 'msg';
     returnOverlay.classList.add('open');
   };
@@ -752,7 +854,7 @@
     const msg = document.getElementById('return-msg');
     btn.disabled = true; btn.textContent = 'Processing...';
 
-    const productId = document.getElementById('return-product-id').value;
+    const productId = document.getElementById('return-product').value;
     const qty = parseFloat(document.getElementById('return-qty').value);
     const reason = document.getElementById('return-reason').value;
     const product = products.find(p => p.id === productId);
@@ -764,23 +866,13 @@
       return;
     }
 
-    const { error: updateError } = await sb
-      .from('products')
-      .update({ stock_quantity: product.stock_quantity - qty })
-      .eq('id', productId);
-
-    if (updateError) {
-      btn.disabled = false; btn.textContent = 'Confirm Return';
-      msg.textContent = 'Failed: ' + updateError.message;
-      msg.className = 'msg error';
-      return;
-    }
-
+    await sb.from('products').update({ stock_quantity: product.stock_quantity - qty }).eq('id', productId);
     await sb.from('product_returns').insert({
       shop_id: profile.shop_id,
       product_id: productId,
       quantity: qty,
       reason,
+      type: 'return',
       created_by: profile.id
     });
 
@@ -790,6 +882,62 @@
 
     await loadProducts();
     setTimeout(() => { returnOverlay.classList.remove('open'); }, 800);
+  });
+
+  // ============================================================
+  // Damage / Loss
+  // ============================================================
+  const damageOverlay = document.getElementById('damage-modal-overlay');
+
+  window.openDamage = function() {
+    adjustMenu.classList.remove('open');
+    document.getElementById('damage-form').reset();
+    document.getElementById('damage-product').innerHTML = products
+      .map(p => `<option value="${p.id}">${p.name}${p.code ? ' (#' + p.code + ')' : ''}</option>`)
+      .join('') || '<option value="" disabled selected>No products yet</option>';
+    document.getElementById('damage-msg').className = 'msg';
+    damageOverlay.classList.add('open');
+  };
+
+  document.getElementById('damage-close-modal').addEventListener('click', (e) => {
+    e.preventDefault();
+    damageOverlay.classList.remove('open');
+  });
+
+  document.getElementById('damage-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('damage-save-btn');
+    const msg = document.getElementById('damage-msg');
+    btn.disabled = true; btn.textContent = 'Processing...';
+
+    const productId = document.getElementById('damage-product').value;
+    const qty = parseFloat(document.getElementById('damage-qty').value);
+    const reason = document.getElementById('damage-reason').value;
+    const product = products.find(p => p.id === productId);
+
+    if (!product || qty > product.stock_quantity) {
+      btn.disabled = false; btn.textContent = 'Confirm Loss';
+      msg.textContent = 'Cannot exceed current stock (' + (product?.stock_quantity ?? 0) + ').';
+      msg.className = 'msg error';
+      return;
+    }
+
+    await sb.from('products').update({ stock_quantity: product.stock_quantity - qty }).eq('id', productId);
+    await sb.from('product_returns').insert({
+      shop_id: profile.shop_id,
+      product_id: productId,
+      quantity: qty,
+      reason,
+      type: 'damage',
+      created_by: profile.id
+    });
+
+    btn.disabled = false; btn.textContent = 'Confirm Loss';
+    msg.textContent = 'Loss recorded and stock updated!';
+    msg.className = 'msg success';
+
+    await loadProducts();
+    setTimeout(() => { damageOverlay.classList.remove('open'); }, 800);
   });
 
   init();
