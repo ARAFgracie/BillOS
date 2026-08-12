@@ -81,6 +81,10 @@
     width:28px; height:28px; border-radius:8px; border:none;
     background:#FEECEC; color:#DC2626; font-size:14px; cursor:pointer;
   }
+  .discount-tag{
+    display:inline-block; background:rgba(34,197,94,0.15); color:var(--blue);
+    font-size:9.5px; font-weight:800; padding:1px 6px; border-radius:10px; margin-left:4px;
+  }
 
   .empty-card{
     background:#fff; border:1px dashed var(--border); border-radius:14px;
@@ -145,6 +149,76 @@
     font-size:12.5px; font-weight:600; opacity:0; transition:opacity .2s; z-index:30;
   }
   .toast.show{ opacity:1; }
+
+  /* ---------- Hold button (cart bar) ---------- */
+  .hold-btn{
+    background:rgba(127,127,127,0.12); color:var(--ink); border:1px solid var(--border);
+    border-radius:12px; padding:10px 14px; font-weight:700; font-size:13px; cursor:pointer;
+    display:flex; align-items:center; gap:6px;
+  }
+  .hold-badge{
+    background:var(--blue); color:#fff; font-size:10px; font-weight:800;
+    border-radius:10px; padding:1px 6px; min-width:16px; text-align:center;
+  }
+
+  /* ---------- Hold panel (slide-in from right) ---------- */
+  .hold-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,0.4); backdrop-filter:blur(3px);
+    display:none; z-index:25;
+  }
+  .hold-overlay.open{ display:block; }
+  .hold-panel{
+    position:fixed; top:0; right:0; bottom:0; width:100%; max-width:400px;
+    background:var(--card); border-left:1px solid var(--border);
+    display:flex; flex-direction:column;
+    transform:translateX(100%); transition:transform 0.25s ease;
+  }
+  .hold-overlay.open .hold-panel{ transform:translateX(0); }
+  .hold-header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 20px; border-bottom:1px solid var(--border); flex-shrink:0;
+  }
+  .hold-header h3{ margin:0; font-size:16px; }
+  .hold-close{
+    width:30px; height:30px; border-radius:8px; border:none;
+    background:rgba(127,127,127,0.12); color:var(--ink); font-size:14px; cursor:pointer;
+  }
+  .hold-body{ flex:1; min-height:0; overflow-y:auto; padding:16px 20px; }
+
+  .hold-current-box{
+    border:1px solid var(--border); border-radius:14px; padding:14px; margin-bottom:20px;
+    background:rgba(34,197,94,0.06);
+  }
+  .hold-current-box .label{ font-size:11px; font-weight:800; color:var(--muted); text-transform:uppercase; margin-bottom:8px; }
+  .hold-folder-row{ display:flex; gap:8px; margin-bottom:8px; }
+  .hold-folder-row input, .hold-folder-row select{
+    flex:1; padding:10px 12px; border-radius:10px; border:1px solid var(--border);
+    background:rgba(127,127,127,0.06); color:var(--ink); font-size:13px; outline:none;
+  }
+  .hold-btn-confirm{
+    width:100%; padding:11px 0; border:none; border-radius:12px;
+    background:var(--blue); color:#fff; font-weight:800; font-size:13.5px; cursor:pointer;
+  }
+  .hold-btn-confirm:disabled{ opacity:0.5; cursor:not-allowed; }
+
+  .hold-folder-group{ margin-bottom:16px; }
+  .hold-folder-title{ font-size:12.5px; font-weight:800; color:var(--blue); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.3px; }
+  .held-bill-row{
+    display:flex; align-items:center; justify-content:space-between;
+    border:1px solid var(--border); border-radius:12px; padding:11px 13px; margin-bottom:8px;
+  }
+  .held-bill-info .hb-meta{ font-size:11px; color:var(--muted); }
+  .held-bill-info .hb-amount{ font-weight:800; font-size:14px; }
+  .held-bill-actions{ display:flex; gap:6px; }
+  .hb-resume-btn{
+    background:var(--blue); color:#fff; border:none; border-radius:9px;
+    padding:7px 12px; font-weight:700; font-size:12px; cursor:pointer;
+  }
+  .hb-delete-btn{
+    background:rgba(220,38,38,0.12); color:var(--error); border:none; border-radius:9px;
+    width:30px; font-weight:700; font-size:12px; cursor:pointer;
+  }
+  .hold-empty{ text-align:center; color:var(--muted); font-size:13px; padding:30px 10px; }
 </style>
 </head>
 <body>
@@ -179,6 +253,9 @@
 
   <div class="cart-bar">
     <div class="cart-row">
+      <button class="hold-btn" id="hold-open-btn" title="Hold bill (Ctrl+H)">
+        ⏸ Hold <span class="hold-badge" id="hold-badge" style="display:none;">0</span>
+      </button>
       <div class="cart-info" id="cart-info">0 items</div>
       <div class="cart-total" id="cart-total">৳0</div>
       <button class="charge-btn" id="charge-btn" disabled>Charge</button>
@@ -199,6 +276,29 @@
   </div>
 </div>
 
+<div class="hold-overlay" id="hold-overlay">
+  <div class="hold-panel">
+    <div class="hold-header">
+      <h3>Held Bills</h3>
+      <button class="hold-close" id="hold-close-btn">✕</button>
+    </div>
+    <div class="hold-body">
+      <div class="hold-current-box" id="hold-current-box" style="display:none;">
+        <div class="label">Hold Current Bill</div>
+        <div class="hold-folder-row">
+          <select id="hold-folder-select"></select>
+        </div>
+        <div class="hold-folder-row">
+          <input type="text" id="hold-folder-new" placeholder="Or type a new folder name...">
+        </div>
+        <button class="hold-btn-confirm" id="hold-confirm-btn">Hold This Bill</button>
+      </div>
+
+      <div id="held-bills-list"></div>
+    </div>
+  </div>
+</div>
+
 <script>
   const SUPABASE_URL = "https://ektdcnvraluuwxmqhjvj.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_yTDG8ujXgVE81BNAvPvZlw_tlbfKNTm";
@@ -211,6 +311,36 @@
   let cartOrder = [];  // ordered list of productIds, most recent last
   let selectedPayment = 'cash';
   let lastF1Time = 0;
+  let heldBills = [];  // held_bills rows for this shop
+  let discounts = [];  // active/scheduled discounts for this shop
+
+  async function loadDiscounts() {
+    const { data } = await sb
+      .from('discounts')
+      .select('*')
+      .eq('shop_id', profile.shop_id)
+      .eq('is_active', true);
+    discounts = data || [];
+  }
+
+  function getActiveDiscount(productId) {
+    const now = new Date();
+    return discounts.find(d => {
+      if (d.product_id && d.product_id !== productId) return false;
+      const starts = new Date(d.starts_at);
+      const ends = new Date(d.ends_at);
+      return now >= starts && now <= ends;
+    }) || null;
+  }
+
+  function getUnitPrice(product) {
+    const discount = getActiveDiscount(product.id);
+    if (!discount) return product.price;
+    if (discount.discount_type === 'percentage') {
+      return Math.max(0, product.price * (1 - discount.discount_value / 100));
+    }
+    return Math.max(0, product.price - discount.discount_value);
+  }
 
   async function init() {
     const { data: { session } } = await sb.auth.getSession();
@@ -229,10 +359,16 @@
     profile = p;
 
     await loadProducts();
+    await loadHeldBills();
+    await loadDiscounts();
 
     document.getElementById('loading').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     document.getElementById('search').focus();
+
+    if (new URLSearchParams(window.location.search).get('hold') === '1') {
+      openHoldPanel();
+    }
   }
 
   async function loadProducts() {
@@ -334,13 +470,18 @@
       const entry = cart[id];
       if (!entry) return '';
       const p = entry.product;
-      const lineTotal = (entry.qty * p.price).toFixed(2);
+      const discount = getActiveDiscount(p.id);
+      const unitPrice = getUnitPrice(p);
+      const lineTotal = (entry.qty * unitPrice).toFixed(2);
       const justAdded = id === justAddedId ? ' just-added' : '';
+      const priceMeta = discount
+        ? `#${p.code || '—'} · <span style="text-decoration:line-through;opacity:0.6;">৳${p.price}</span> ৳${unitPrice.toFixed(2)}/${p.unit} <span class="discount-tag">🏷️ ${discount.name}</span>`
+        : `#${p.code || '—'} · ৳${p.price}/${p.unit}`;
       return `
         <div class="item-row${justAdded}">
           <div>
             <div class="i-name">${p.name}</div>
-            <div class="i-meta">#${p.code || '—'} · ৳${p.price}/${p.unit}</div>
+            <div class="i-meta">${priceMeta}</div>
           </div>
           <div class="i-right">
             <input type="number" min="0" step="${p.is_weighted ? '0.01' : '1'}" class="qty-input" id="qty-${id}" value="${entry.qty}"
@@ -383,10 +524,177 @@
     renderCart();
   };
 
+  // ============================================================
+  // Hold / Park Bill system
+  // ============================================================
+  const holdOverlay = document.getElementById('hold-overlay');
+
+  async function loadHeldBills() {
+    const { data } = await sb
+      .from('held_bills')
+      .select('*')
+      .eq('shop_id', profile.shop_id)
+      .order('created_at', { ascending: false });
+    heldBills = data || [];
+    updateHoldBadge();
+  }
+
+  function updateHoldBadge() {
+    const badge = document.getElementById('hold-badge');
+    if (heldBills.length > 0) {
+      badge.textContent = heldBills.length;
+      badge.style.display = 'inline-block';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
+  function folderOptionsHtml() {
+    const folders = [...new Set(heldBills.map(h => h.folder_name))];
+    if (!folders.length) return '<option value="">— No folders yet —</option>';
+    return '<option value="">Select existing folder...</option>' +
+      folders.map(f => `<option value="${f}">${f}</option>`).join('');
+  }
+
+  function renderHoldPanel() {
+    const hasCartItems = cartOrder.length > 0;
+    document.getElementById('hold-current-box').style.display = hasCartItems ? 'block' : 'none';
+    document.getElementById('hold-folder-select').innerHTML = folderOptionsHtml();
+    document.getElementById('hold-folder-new').value = '';
+
+    const listEl = document.getElementById('held-bills-list');
+    if (!heldBills.length) {
+      listEl.innerHTML = '<div class="hold-empty">No held bills. Bills you hold will appear here, grouped by folder.</div>';
+      return;
+    }
+
+    const folders = [...new Set(heldBills.map(h => h.folder_name))];
+    listEl.innerHTML = folders.map(folder => {
+      const rows = heldBills.filter(h => h.folder_name === folder);
+      const rowsHtml = rows.map(h => `
+        <div class="held-bill-row">
+          <div class="held-bill-info">
+            <div class="hb-amount">৳${Number(h.total_amount).toFixed(2)}</div>
+            <div class="hb-meta">${h.item_count} item${h.item_count !== 1 ? 's' : ''} · ${new Date(h.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
+          </div>
+          <div class="held-bill-actions">
+            <button class="hb-resume-btn" onclick="resumeHeldBill('${h.id}')">Resume</button>
+            <button class="hb-delete-btn" onclick="deleteHeldBill('${h.id}')">✕</button>
+          </div>
+        </div>
+      `).join('');
+      return `
+        <div class="hold-folder-group">
+          <div class="hold-folder-title">📁 ${folder}</div>
+          ${rowsHtml}
+        </div>
+      `;
+    }).join('');
+  }
+
+  window.openHoldPanel = function() {
+    renderHoldPanel();
+    holdOverlay.classList.add('open');
+  };
+  window.closeHoldPanel = function() {
+    holdOverlay.classList.remove('open');
+  };
+
+  document.getElementById('hold-open-btn').addEventListener('click', openHoldPanel);
+  document.getElementById('hold-close-btn').addEventListener('click', closeHoldPanel);
+  holdOverlay.addEventListener('click', (e) => {
+    if (e.target === holdOverlay) closeHoldPanel();
+  });
+
+  document.getElementById('hold-confirm-btn').addEventListener('click', async () => {
+    const items = cartOrder.map(id => cart[id]).filter(Boolean);
+    if (!items.length) return;
+
+    const newFolder = document.getElementById('hold-folder-new').value.trim();
+    const selectedFolder = document.getElementById('hold-folder-select').value;
+    const folderName = newFolder || selectedFolder;
+
+    if (!folderName) {
+      showToast('Pick or type a folder name first');
+      return;
+    }
+
+    const btn = document.getElementById('hold-confirm-btn');
+    btn.disabled = true; btn.textContent = 'Holding...';
+
+    const totalAmount = items.reduce((sum, i) => sum + i.qty * getUnitPrice(i.product), 0);
+    const cartData = items.map(i => ({ productId: i.product.id, qty: i.qty }));
+
+    const { error } = await sb.from('held_bills').insert({
+      shop_id: profile.shop_id,
+      folder_name: folderName,
+      cart_data: cartData,
+      item_count: items.length,
+      total_amount: totalAmount,
+      created_by: profile.id
+    });
+
+    btn.disabled = false; btn.textContent = 'Hold This Bill';
+
+    if (error) {
+      showToast('Failed to hold bill: ' + error.message);
+      return;
+    }
+
+    cart = {};
+    cartOrder = [];
+    renderCart();
+    await loadHeldBills();
+    renderHoldPanel();
+    showToast('Bill held in "' + folderName + '"');
+  });
+
+  window.resumeHeldBill = async function(id) {
+    const held = heldBills.find(h => h.id === id);
+    if (!held) return;
+
+    if (cartOrder.length > 0) {
+      if (!confirm('This will replace your current in-progress bill. Continue?')) return;
+    }
+
+    cart = {};
+    cartOrder = [];
+    let skipped = 0;
+
+    held.cart_data.forEach(item => {
+      const product = products.find(p => p.id === item.productId);
+      if (!product) { skipped++; return; }
+      cart[product.id] = { product, qty: item.qty };
+      cartOrder.push(product.id);
+    });
+
+    await sb.from('held_bills').delete().eq('id', id);
+    await loadHeldBills();
+
+    renderCart();
+    closeHoldPanel();
+    showToast(skipped > 0 ? `Bill resumed (${skipped} item(s) no longer available)` : 'Bill resumed');
+  };
+
+  window.deleteHeldBill = async function(id) {
+    if (!confirm('Delete this held bill? This cannot be undone.')) return;
+    await sb.from('held_bills').delete().eq('id', id);
+    await loadHeldBills();
+    renderHoldPanel();
+  };
+
+  // Ctrl+H opens/closes the Hold panel
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && (e.key === 'h' || e.key === 'H')) {
+      e.preventDefault();
+      holdOverlay.classList.contains('open') ? closeHoldPanel() : openHoldPanel();
+    }
+  });
+
   function updateCartBar() {
     const items = cartOrder.map(id => cart[id]).filter(Boolean);
     const totalQty = items.reduce((sum, i) => sum + i.qty, 0);
-    const totalAmount = items.reduce((sum, i) => sum + i.qty * i.product.price, 0);
+    const totalAmount = items.reduce((sum, i) => sum + i.qty * getUnitPrice(i.product), 0);
 
     document.getElementById('cart-info').textContent = totalQty.toFixed(totalQty % 1 === 0 ? 0 : 2) + ' item' + (totalQty !== 1 ? 's' : '');
     document.getElementById('cart-total').textContent = '৳' + totalAmount.toFixed(2);
@@ -396,7 +704,7 @@
   // ---------- Checkout ----------
   document.getElementById('charge-btn').addEventListener('click', () => {
     const items = cartOrder.map(id => cart[id]).filter(Boolean);
-    const totalAmount = items.reduce((sum, i) => sum + i.qty * i.product.price, 0);
+    const totalAmount = items.reduce((sum, i) => sum + i.qty * getUnitPrice(i.product), 0);
     document.getElementById('modal-total').textContent = '৳' + totalAmount.toFixed(2);
     document.getElementById('modal-overlay').classList.add('open');
   });
@@ -419,7 +727,7 @@
     btn.disabled = true; btn.textContent = 'Processing...';
 
     const items = cartOrder.map(id => cart[id]).filter(Boolean);
-    const totalAmount = items.reduce((sum, i) => sum + i.qty * i.product.price, 0);
+    const totalAmount = items.reduce((sum, i) => sum + i.qty * getUnitPrice(i.product), 0);
 
     const { data: invoice, error: invError } = await sb
       .from('invoices')
@@ -443,8 +751,8 @@
       invoice_id: invoice.id,
       product_id: i.product.id,
       quantity: i.qty,
-      unit_price: i.product.price,
-      line_total: i.qty * i.product.price
+      unit_price: getUnitPrice(i.product),
+      line_total: i.qty * getUnitPrice(i.product)
     }));
 
     const { error: itemsError } = await sb.from('invoice_items').insert(invoiceItems);

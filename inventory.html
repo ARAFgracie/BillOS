@@ -186,6 +186,25 @@
     border-top:1px solid var(--border);
   }
   .grn-hint{ font-size:11px; color:var(--muted); margin:-4px 0 12px; }
+
+  /* ---------- Discounts ---------- */
+  .discount-row{
+    display:flex; align-items:center; justify-content:space-between;
+    border:1px solid var(--border); border-radius:12px; padding:11px 13px; margin-bottom:8px;
+  }
+  .discount-name{ font-weight:700; font-size:13px; }
+  .discount-meta{ font-size:11px; color:var(--muted); margin-top:2px; }
+  .discount-status{
+    font-size:10px; font-weight:800; text-transform:uppercase; padding:2px 8px;
+    border-radius:20px; margin-left:6px;
+  }
+  .discount-status.active{ background:rgba(16,185,129,0.15); color:var(--green, #10B981); }
+  .discount-status.upcoming{ background:rgba(245,158,11,0.15); color:var(--amber-text); }
+  .discount-status.expired{ background:rgba(127,127,127,0.15); color:var(--muted); }
+  .discount-delete-btn{
+    width:28px; height:28px; border-radius:8px; border:none;
+    background:rgba(220,38,38,0.12); color:var(--red); cursor:pointer; font-size:12px; flex-shrink:0;
+  }
 </style>
 </head>
 <body>
@@ -216,6 +235,7 @@
           <div class="adjust-option" onclick="openGrn()">📥 GRN (Bulk Add)</div>
           <div class="adjust-option" onclick="openReturn()">↩ Return to Supplier</div>
           <div class="adjust-option" onclick="openDamage()">⚠ Damage / Loss</div>
+          <div class="adjust-option" onclick="openDiscount()">🏷️ Discounts</div>
         </div>
       </div>
     </div>
@@ -384,6 +404,61 @@
         <a href="#" class="cancel-link" id="damage-close-modal">Cancel</a>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- ============================================================
+     Discounts modal — create + list, timeline (start/end) enabled
+     ============================================================ -->
+<div class="modal-overlay" id="discount-modal-overlay">
+  <div class="modal">
+    <h3>Discounts</h3>
+    <div class="modal-scroll">
+      <form id="discount-form">
+        <label for="discount-name">Discount Name</label>
+        <input type="text" id="discount-name" placeholder="e.g. Eid Sale" required>
+
+        <div class="grn-header-grid">
+          <div>
+            <label for="discount-type">Type</label>
+            <select id="discount-type">
+              <option value="percentage">Percentage (%)</option>
+              <option value="flat">Flat Amount (৳)</option>
+            </select>
+          </div>
+          <div>
+            <label for="discount-value">Value</label>
+            <input type="number" id="discount-value" step="0.01" min="0" required>
+          </div>
+        </div>
+
+        <label for="discount-product">Applies To</label>
+        <select id="discount-product">
+          <option value="">All Products</option>
+        </select>
+
+        <div class="grn-header-grid">
+          <div>
+            <label for="discount-start">Starts</label>
+            <input type="datetime-local" id="discount-start" required>
+          </div>
+          <div>
+            <label for="discount-end">Ends</label>
+            <input type="datetime-local" id="discount-end" required>
+          </div>
+        </div>
+        <div class="grn-hint">The discount automatically turns on at "Starts" and off at "Ends" — no manual toggling needed during a sale.</div>
+
+        <button type="submit" class="save-btn" id="discount-save-btn">Create Discount</button>
+        <div class="msg" id="discount-msg"></div>
+      </form>
+
+      <label style="margin-top:6px;">Active &amp; Scheduled</label>
+      <div id="discount-list"></div>
+    </div>
+    <div class="modal-footer">
+      <a href="#" class="cancel-link" id="discount-close-modal">Close</a>
+    </div>
   </div>
 </div>
 
@@ -939,6 +1014,129 @@
     await loadProducts();
     setTimeout(() => { damageOverlay.classList.remove('open'); }, 800);
   });
+
+  // ============================================================
+  // Discounts — timeline-enabled (auto on/off by start/end time)
+  // ============================================================
+  const discountOverlay = document.getElementById('discount-modal-overlay');
+  let discounts = [];
+
+  function discountStatus(d) {
+    const now = new Date();
+    const starts = new Date(d.starts_at);
+    const ends = new Date(d.ends_at);
+    if (!d.is_active) return 'expired';
+    if (now < starts) return 'upcoming';
+    if (now > ends) return 'expired';
+    return 'active';
+  }
+
+  async function loadDiscounts() {
+    const { data } = await sb
+      .from('discounts')
+      .select('*')
+      .eq('shop_id', profile.shop_id)
+      .order('starts_at', { ascending: false });
+    discounts = data || [];
+    renderDiscountList();
+  }
+
+  function renderDiscountList() {
+    const container = document.getElementById('discount-list');
+    if (!discounts.length) {
+      container.innerHTML = '<div class="empty-card">No discounts yet. Create one above — it will switch on and off automatically.</div>';
+      return;
+    }
+    container.innerHTML = discounts.map(d => {
+      const status = discountStatus(d);
+      const product = products.find(p => p.id === d.product_id);
+      const scope = product ? product.name : 'All Products';
+      const valueLabel = d.discount_type === 'percentage' ? d.discount_value + '%' : '৳' + d.discount_value;
+      const startLabel = new Date(d.starts_at).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+      const endLabel = new Date(d.ends_at).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+      return `
+        <div class="discount-row">
+          <div>
+            <div class="discount-name">${d.name} <span class="discount-status ${status}">${status}</span></div>
+            <div class="discount-meta">${valueLabel} off · ${scope} · ${startLabel} → ${endLabel}</div>
+          </div>
+          <button class="discount-delete-btn" onclick="deleteDiscount('${d.id}')">🗑</button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  window.openDiscount = function() {
+    adjustMenu.classList.remove('open');
+    document.getElementById('discount-form').reset();
+    document.getElementById('discount-product').innerHTML = '<option value="">All Products</option>' +
+      products.map(p => `<option value="${p.id}">${p.name}${p.code ? ' (#' + p.code + ')' : ''}</option>`).join('');
+    document.getElementById('discount-msg').className = 'msg';
+
+    const now = new Date();
+    const nowLocal = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    document.getElementById('discount-start').value = nowLocal;
+
+    loadDiscounts();
+    discountOverlay.classList.add('open');
+  };
+
+  document.getElementById('discount-close-modal').addEventListener('click', (e) => {
+    e.preventDefault();
+    discountOverlay.classList.remove('open');
+  });
+
+  document.getElementById('discount-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('discount-save-btn');
+    const msg = document.getElementById('discount-msg');
+    btn.disabled = true; btn.textContent = 'Saving...';
+
+    const name = document.getElementById('discount-name').value;
+    const type = document.getElementById('discount-type').value;
+    const value = parseFloat(document.getElementById('discount-value').value);
+    const productId = document.getElementById('discount-product').value || null;
+    const startsAt = document.getElementById('discount-start').value;
+    const endsAt = document.getElementById('discount-end').value;
+
+    if (new Date(endsAt) <= new Date(startsAt)) {
+      btn.disabled = false; btn.textContent = 'Create Discount';
+      msg.textContent = 'End time must be after start time.';
+      msg.className = 'msg error';
+      return;
+    }
+
+    const { error } = await sb.from('discounts').insert({
+      shop_id: profile.shop_id,
+      name,
+      discount_type: type,
+      discount_value: value,
+      product_id: productId,
+      starts_at: new Date(startsAt).toISOString(),
+      ends_at: new Date(endsAt).toISOString(),
+      is_active: true,
+      created_by: profile.id
+    });
+
+    btn.disabled = false; btn.textContent = 'Create Discount';
+
+    if (error) {
+      msg.textContent = 'Failed: ' + error.message;
+      msg.className = 'msg error';
+      return;
+    }
+
+    msg.textContent = 'Discount scheduled!';
+    msg.className = 'msg success';
+    document.getElementById('discount-form').reset();
+    await loadDiscounts();
+  });
+
+  window.deleteDiscount = async function(id) {
+    if (!confirm('Delete this discount?')) return;
+    await sb.from('discounts').delete().eq('id', id);
+    await loadDiscounts();
+  };
 
   init();
 </script>

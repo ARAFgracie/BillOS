@@ -118,6 +118,11 @@
     text-decoration:none; color:var(--ink); font-size:12px; font-weight:700; text-align:center;
   }
   .qa-icon{ width:34px; height:34px; border-radius:10px; background:rgba(34,197,94,0.12); display:flex; align-items:center; justify-content:center; font-size:15px; }
+  .qa-badge{
+    position:absolute; top:8px; right:8px;
+    background:var(--blue); color:#fff; font-size:9.5px; font-weight:800;
+    border-radius:10px; padding:1px 6px; min-width:16px; text-align:center;
+  }
 
 
   /* ============================================================
@@ -238,6 +243,10 @@
         <div class="panel-head"><h3>Quick Actions</h3></div>
         <div class="qa-grid">
           <a href="billing.html" class="qa-item"><div class="qa-icon">🛒</div>New Sale</a>
+          <a href="billing.html?hold=1" class="qa-item" style="position:relative;">
+            <div class="qa-icon">⏸</div>Held Bills
+            <span class="qa-badge" id="held-bills-badge" style="display:none;">0</span>
+          </a>
           <a href="inventory.html" class="qa-item" id="qa-inventory"><div class="qa-icon">📦</div>Add Product</a>
           <a href="bills.html" class="qa-item"><div class="qa-icon">🧾</div>View Bills</a>
           <a href="reports.html" class="qa-item" id="qa-reports"><div class="qa-icon">📈</div>View Reports</a>
@@ -307,10 +316,23 @@
       loadSalesOverview(profile.shop_id),
       loadRecentSales(profile.shop_id),
       loadTopProducts(profile.shop_id),
+      loadHeldBillsCount(profile.shop_id),
     ]);
 
     document.getElementById('loading').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
+  }
+
+  async function loadHeldBillsCount(shopId) {
+    const { count } = await sb
+      .from('held_bills')
+      .select('id', { count: 'exact', head: true })
+      .eq('shop_id', shopId);
+    const badge = document.getElementById('held-bills-badge');
+    if (count > 0) {
+      badge.textContent = count;
+      badge.style.display = 'inline-block';
+    }
   }
 
   function renderProfile(profile) {
