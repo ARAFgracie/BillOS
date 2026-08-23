@@ -7,9 +7,12 @@
 
    Mobile/tablet (<1024px): untouched, existing bottom-nav layout.
    Desktop (>=1024px): fixed left sidebar replaces bottom-nav.
+   Sidebar is collapsible: slides in/out with transform, state
+   persisted in localStorage (billos-sidebar-state).
    ============================================================ */
 
 .app-sidebar{ display:none; }
+.app-sidebar-toggle{ display:none; }
 
 @media (min-width: 1024px){
 
@@ -26,6 +29,11 @@
     border-top:none;
     border-bottom:none;
     border-left:none;
+    transform:translateX(0);
+    transition:transform 0.25s ease;
+  }
+  .app-sidebar.collapsed{
+    transform:translateX(-100%);
   }
   .app-sidebar-brand{ display:flex; align-items:center; gap:10px; padding:0 6px 24px; }
   .app-sidebar-logo{
@@ -58,10 +66,46 @@
   }
   .app-sidebar-logout:hover{ background:rgba(220,38,38,0.08); }
 
+  /* ---------- Toggle button (visible only when sidebar collapsed) ---------- */
+  .app-sidebar-toggle{
+    display:none;
+    position:fixed;
+    top:20px; left:12px;
+    width:36px; height:36px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:var(--card);
+    color:var(--ink);
+    font-size:18px;
+    font-weight:700;
+    cursor:pointer;
+    z-index:101;
+    align-items:center;
+    justify-content:center;
+    box-shadow:0 2px 12px rgba(0,0,0,0.12);
+    transition:opacity 0.2s ease, background 0.15s ease;
+  }
+  .app-sidebar-toggle:hover{ background:rgba(127,127,127,0.12); }
+  body.sidebar-collapsed .app-sidebar-toggle{
+    display:flex;
+  }
+
   /* ---------- Shift existing page content to make room ---------- */
-  body{ margin-left:230px; }
-  .cart-bar{ left:230px; }
+  body{
+    margin-left:230px;
+    transition:margin-left 0.25s ease;
+  }
+  body.sidebar-collapsed{
+    margin-left:0;
+  }
+  .cart-bar{
+    left:230px;
+    transition:left 0.25s ease;
+  }
+  body.sidebar-collapsed .cart-bar{
+    left:0;
+  }
 
   /* Mobile bottom navigation is replaced by the sidebar on desktop */
-  .bottom-nav{ display:none; }
+  .bottom-nav{ display:none !important; }
 }

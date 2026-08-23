@@ -116,8 +116,13 @@
   }
   .modal-overlay.open{ display:flex; }
   .modal{
-    background:#fff; border-radius:20px 20px 0 0; padding:24px 20px 28px;
+    background:var(--card); border-radius:20px 20px 0 0; padding:24px 20px 28px;
     width:100%; max-width:600px;
+    border:1px solid var(--border);
+  }
+  .modal.h65{
+    height:65vh; max-height:65vh;
+    display:flex; flex-direction:column;
   }
   .modal h3{ margin:0 0 16px; }
   .pay-options{ display:flex; gap:10px; margin-bottom:20px; }
@@ -219,6 +224,139 @@
     width:30px; font-weight:700; font-size:12px; cursor:pointer;
   }
   .hold-empty{ text-align:center; color:var(--muted); font-size:13px; padding:30px 10px; }
+
+  /* ---------- F6 centered confirm dialogs ---------- */
+  .confirm-dialog-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,0.45); backdrop-filter:blur(4px);
+    display:none; align-items:center; justify-content:center; z-index:40;
+  }
+  .confirm-dialog-overlay.open{ display:flex; }
+  .confirm-dialog{
+    background:var(--card); border:1px solid var(--border);
+    border-radius:18px; padding:24px 22px 20px;
+    width:90%; max-width:340px;
+    box-shadow:0 20px 50px rgba(0,0,0,0.25);
+  }
+  .confirm-dialog p{
+    margin:0 0 20px; font-size:15px; font-weight:600; color:var(--ink); text-align:center;
+  }
+  .confirm-dialog-btns{ display:flex; gap:10px; }
+  .confirm-dialog-btn{
+    flex:1; padding:12px 0; border-radius:12px; border:1.5px solid var(--border);
+    font-weight:800; font-size:14px; cursor:pointer;
+    background:rgba(127,127,127,0.08); color:var(--ink);
+    transition:background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .confirm-dialog-btn.focused,
+  .confirm-dialog-btn:focus{
+    outline:none;
+    border-color:var(--blue);
+    background:rgba(34,197,94,0.14);
+    color:var(--blue);
+    box-shadow:0 0 0 3px rgba(34,197,94,0.2);
+  }
+  .confirm-dialog-btn.primary{
+    background:var(--blue); color:#fff; border-color:var(--blue);
+  }
+  .confirm-dialog-btn.primary.focused,
+  .confirm-dialog-btn.primary:focus{
+    background:var(--blue-dark, #16A34A); border-color:var(--blue-dark, #16A34A);
+    color:#fff;
+  }
+
+  /* ---------- F7 held-bills 70vh overlay ---------- */
+  .f7-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,0.4); backdrop-filter:blur(4px);
+    display:none; align-items:flex-end; justify-content:center; z-index:35;
+  }
+  .f7-overlay.open{ display:flex; }
+  .f7-panel{
+    background:var(--card); border:1px solid var(--border);
+    border-radius:24px 24px 0 0; padding:18px 16px 20px;
+    width:100%; max-width:760px; height:70vh; max-height:70vh;
+    display:flex; flex-direction:column;
+  }
+  .f7-header{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:12px; flex-shrink:0;
+  }
+  .f7-header h3{ margin:0; font-size:16px; }
+  .f7-close{
+    width:30px; height:30px; border-radius:8px; border:none;
+    background:rgba(127,127,127,0.12); color:var(--ink); font-size:14px; cursor:pointer;
+  }
+  .f7-table-wrap{ flex:1; min-height:0; overflow-y:auto; }
+  .f7-table{ width:100%; border-collapse:collapse; font-size:13px; }
+  .f7-table th{
+    text-align:left; font-size:10px; font-weight:800; text-transform:uppercase;
+    color:var(--muted); padding:8px 8px; border-bottom:2px solid var(--border);
+    position:sticky; top:0; background:var(--card);
+  }
+  .f7-table td{
+    padding:11px 8px; border-bottom:1px solid var(--border); color:var(--ink);
+  }
+  .f7-table tr{ cursor:pointer; transition:background 0.12s; }
+  .f7-table tr:hover td{ background:rgba(34,197,94,0.08); }
+  .f7-empty{ text-align:center; color:var(--muted); font-size:13px; padding:40px 10px; }
+
+  /* ---------- Product search overlay (empty-Enter) ---------- */
+  .prodsearch-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,0.4); backdrop-filter:blur(4px);
+    display:none; align-items:flex-end; justify-content:center; z-index:35;
+  }
+  .prodsearch-overlay.open{ display:flex; }
+  .prodsearch-panel{
+    background:var(--card); border:1px solid var(--border);
+    border-radius:24px 24px 0 0; padding:18px 16px 20px;
+    width:100%; max-width:600px; height:70vh; max-height:70vh;
+    display:flex; flex-direction:column;
+  }
+  .prodsearch-header{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:12px; flex-shrink:0;
+  }
+  .prodsearch-header h3{ margin:0; font-size:16px; }
+  .prodsearch-close{
+    width:30px; height:30px; border-radius:8px; border:none;
+    background:rgba(127,127,127,0.12); color:var(--ink); font-size:14px; cursor:pointer;
+  }
+  .prodsearch-input{
+    width:100%; padding:12px 14px; margin-bottom:12px; flex-shrink:0;
+    border-radius:12px; border:1.5px solid var(--border);
+    background:rgba(127,127,127,0.06); color:var(--ink);
+    font-size:15px; outline:none;
+  }
+  .prodsearch-input:focus{ border-color:var(--blue); }
+  .prodsearch-list{ flex:1; min-height:0; overflow-y:auto; }
+  .prodsearch-item{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 12px; border-radius:12px; cursor:pointer;
+    border-bottom:1px solid var(--border);
+  }
+  .prodsearch-item:hover,
+  .prodsearch-item.highlighted{
+    background:rgba(34,197,94,0.12);
+  }
+  .prodsearch-item .ps-name{ font-weight:700; font-size:14px; }
+  .prodsearch-item .ps-meta{ font-size:11.5px; color:var(--muted); margin-top:2px; }
+  .prodsearch-item .ps-price{ font-weight:800; font-size:14px; color:var(--blue); }
+  .prodsearch-empty{ text-align:center; color:var(--muted); font-size:13px; padding:30px 10px; }
+
+  html[data-theme="dark"] .item-row,
+  html[data-theme="ash"] .item-row,
+  html[data-theme="dark"] .empty-card,
+  html[data-theme="ash"] .empty-card{
+    background:var(--card);
+  }
+  html[data-theme="dark"] .pay-opt,
+  html[data-theme="ash"] .pay-opt{
+    background:rgba(255,255,255,0.04);
+    border-color:var(--border);
+  }
+  html[data-theme="dark"] .pay-opt.selected,
+  html[data-theme="ash"] .pay-opt.selected{
+    background:rgba(34,197,94,0.14);
+  }
 </style>
 </head>
 <body>
@@ -245,7 +383,7 @@
     <h1>New Bill</h1>
     <div class="sub">Type a product code or name, then press Enter to add</div>
     <input type="text" class="search" id="search" placeholder="Scan or type product code / name..." autocomplete="off">
-    <div class="hint">Press <b>F1 twice</b> to edit the quantity of the last added item, then press Enter to confirm.</div>
+    <div class="hint">Press <b>F1 twice</b> to edit qty · <b>F6</b> hold · <b>F7</b> held list · <b>Space</b> pay · <b>Enter</b> (empty) search</div>
 
     <div id="row-head-wrap"></div>
     <div id="product-list"></div>
@@ -263,8 +401,9 @@
   </div>
 </div>
 
+<!-- Payment modal (Charge button + Space bar) -->
 <div class="modal-overlay" id="modal-overlay">
-  <div class="modal">
+  <div class="modal" id="payment-modal">
     <h3>Complete Bill — <span id="modal-total"></span></h3>
     <div class="pay-options">
       <div class="pay-opt selected" data-method="cash">Cash</div>
@@ -276,6 +415,7 @@
   </div>
 </div>
 
+<!-- Ctrl+H full Hold panel (existing) -->
 <div class="hold-overlay" id="hold-overlay">
   <div class="hold-panel">
     <div class="hold-header">
@@ -299,6 +439,64 @@
   </div>
 </div>
 
+<!-- F6: Hold confirm dialog -->
+<div class="confirm-dialog-overlay" id="f6-confirm-overlay">
+  <div class="confirm-dialog" role="dialog" aria-modal="true">
+    <p>Do you want to hold the bill?</p>
+    <div class="confirm-dialog-btns">
+      <button type="button" class="confirm-dialog-btn" id="f6-yes-btn" data-choice="yes">Yes</button>
+      <button type="button" class="confirm-dialog-btn focused" id="f6-no-btn" data-choice="no">No</button>
+    </div>
+  </div>
+</div>
+
+<!-- F6: Hold success dialog -->
+<div class="confirm-dialog-overlay" id="f6-success-overlay">
+  <div class="confirm-dialog" role="dialog" aria-modal="true">
+    <p>This bill is successfully moved to hold</p>
+    <div class="confirm-dialog-btns">
+      <button type="button" class="confirm-dialog-btn primary focused" id="f6-ok-btn">Yes</button>
+    </div>
+  </div>
+</div>
+
+<!-- F7: Held bills list (70vh) -->
+<div class="f7-overlay" id="f7-overlay">
+  <div class="f7-panel">
+    <div class="f7-header">
+      <h3>Held Bills</h3>
+      <button type="button" class="f7-close" id="f7-close-btn">✕</button>
+    </div>
+    <div class="f7-table-wrap">
+      <table class="f7-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Number</th>
+            <th>Item Qty</th>
+            <th>Bill Amount</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="f7-tbody"></tbody>
+      </table>
+      <div class="f7-empty" id="f7-empty" style="display:none;">No held bills.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Empty-Enter product search overlay -->
+<div class="prodsearch-overlay" id="prodsearch-overlay">
+  <div class="prodsearch-panel">
+    <div class="prodsearch-header">
+      <h3>Search Products</h3>
+      <button type="button" class="prodsearch-close" id="prodsearch-close-btn">✕</button>
+    </div>
+    <input type="text" class="prodsearch-input" id="prodsearch-input" placeholder="Type name or code..." autocomplete="off">
+    <div class="prodsearch-list" id="prodsearch-list"></div>
+  </div>
+</div>
+
 <script>
   const SUPABASE_URL = "https://ektdcnvraluuwxmqhjvj.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_yTDG8ujXgVE81BNAvPvZlw_tlbfKNTm";
@@ -313,6 +511,9 @@
   let lastF1Time = 0;
   let heldBills = [];  // held_bills rows for this shop
   let discounts = [];  // active/scheduled discounts for this shop
+  let f6FocusChoice = 'no';  // 'yes' | 'no'
+  let prodsearchHighlight = 0;
+  let prodsearchFiltered = [];
 
   async function loadDiscounts() {
     const { data } = await sb
@@ -342,6 +543,11 @@
     return Math.max(0, product.price - discount.discount_value);
   }
 
+  function focusSearch() {
+    const el = document.getElementById('search');
+    if (el) el.focus();
+  }
+
   async function init() {
     const { data: { session } } = await sb.auth.getSession();
     if (!session) { window.location.href = 'login.html'; return; }
@@ -364,7 +570,7 @@
 
     document.getElementById('loading').style.display = 'none';
     document.getElementById('app').style.display = 'block';
-    document.getElementById('search').focus();
+    focusSearch();
 
     if (new URLSearchParams(window.location.search).get('hold') === '1') {
       openHoldPanel();
@@ -390,7 +596,7 @@
     setTimeout(() => t.classList.remove('show'), 1200);
   }
 
-  // ---------- Search + Enter to add ----------
+  // ---------- Search + Enter to add (or open product search if empty) ----------
   function findProduct(query) {
     const q = query.trim().toLowerCase();
     if (!q) return null;
@@ -403,30 +609,36 @@
     return null;
   }
 
+  function addProductToCart(product) {
+    if (cart[product.id]) {
+      cart[product.id].qty += 1;
+    } else {
+      cart[product.id] = { product, qty: 1 };
+    }
+    cartOrder = cartOrder.filter(id => id !== product.id);
+    cartOrder.push(product.id);
+    renderCart(product.id);
+  }
+
   document.getElementById('search').addEventListener('keydown', (e) => {
     if (e.key !== 'Enter') return;
     e.preventDefault();
     const input = e.target;
-    const query = input.value;
-    const product = findProduct(query);
+    const query = input.value.trim();
 
+    if (!query) {
+      openProductSearch();
+      return;
+    }
+
+    const product = findProduct(query);
     if (!product) {
       showToast('No matching product found');
       return;
     }
 
-    if (cart[product.id]) {
-      cart[product.id].qty += 1;
-    } else {
-      cart[product.id] = { product, qty: 1 };
-      cartOrder = cartOrder.filter(id => id !== product.id);
-    }
-    // Move to end (most recent)
-    cartOrder = cartOrder.filter(id => id !== product.id);
-    cartOrder.push(product.id);
-
+    addProductToCart(product);
     input.value = '';
-    renderCart(product.id);
     input.focus();
   });
 
@@ -436,7 +648,6 @@
       e.preventDefault();
       const now = Date.now();
       if (now - lastF1Time < 500) {
-        // Double press detected
         const lastId = cartOrder[cartOrder.length - 1];
         if (lastId) {
           const qtyInput = document.getElementById('qty-' + lastId);
@@ -500,7 +711,7 @@
     if (e.key === 'Enter') {
       e.preventDefault();
       updateQty(id, e.target.value);
-      document.getElementById('search').focus();
+      focusSearch();
     }
   };
 
@@ -525,7 +736,7 @@
   };
 
   // ============================================================
-  // Hold / Park Bill system
+  // Hold / Park Bill system (Ctrl+H full panel — unchanged)
   // ============================================================
   const holdOverlay = document.getElementById('hold-overlay');
 
@@ -673,7 +884,9 @@
 
     renderCart();
     closeHoldPanel();
+    closeF7Panel();
     showToast(skipped > 0 ? `Bill resumed (${skipped} item(s) no longer available)` : 'Bill resumed');
+    focusSearch();
   };
 
   window.deleteHeldBill = async function(id) {
@@ -681,6 +894,7 @@
     await sb.from('held_bills').delete().eq('id', id);
     await loadHeldBills();
     renderHoldPanel();
+    renderF7List();
   };
 
   // Ctrl+H opens/closes the Hold panel
@@ -701,16 +915,28 @@
     document.getElementById('charge-btn').disabled = items.length === 0;
   }
 
-  // ---------- Checkout ----------
-  document.getElementById('charge-btn').addEventListener('click', () => {
+  // ---------- Checkout (Charge button + Space) ----------
+  function openPaymentModal(use65vh) {
     const items = cartOrder.map(id => cart[id]).filter(Boolean);
+    if (!items.length) return;
     const totalAmount = items.reduce((sum, i) => sum + i.qty * getUnitPrice(i.product), 0);
     document.getElementById('modal-total').textContent = '৳' + totalAmount.toFixed(2);
+    const modal = document.getElementById('payment-modal');
+    if (use65vh) {
+      modal.classList.add('h65');
+    } else {
+      modal.classList.remove('h65');
+    }
     document.getElementById('modal-overlay').classList.add('open');
+  }
+
+  document.getElementById('charge-btn').addEventListener('click', () => {
+    openPaymentModal(false);
   });
   document.getElementById('cancel-link').addEventListener('click', (e) => {
     e.preventDefault();
     document.getElementById('modal-overlay').classList.remove('open');
+    focusSearch();
   });
 
   document.querySelectorAll('.pay-opt').forEach(opt => {
@@ -782,8 +1008,317 @@
       msg.className = 'msg';
       btn.disabled = false;
       loadProducts();
-      document.getElementById('search').focus();
+      focusSearch();
     }, 1200);
+  });
+
+  // ============================================================
+  // F6 — Quick Hold with two-step confirm dialog
+  // ============================================================
+  const f6ConfirmOverlay = document.getElementById('f6-confirm-overlay');
+  const f6SuccessOverlay = document.getElementById('f6-success-overlay');
+  const f6YesBtn = document.getElementById('f6-yes-btn');
+  const f6NoBtn = document.getElementById('f6-no-btn');
+  const f6OkBtn = document.getElementById('f6-ok-btn');
+
+  function setF6Focus(choice) {
+    f6FocusChoice = choice;
+    f6YesBtn.classList.toggle('focused', choice === 'yes');
+    f6NoBtn.classList.toggle('focused', choice === 'no');
+    if (choice === 'yes') f6YesBtn.focus();
+    else f6NoBtn.focus();
+  }
+
+  function openF6Confirm() {
+    if (!cartOrder.length) {
+      showToast('No items to hold');
+      return;
+    }
+    f6ConfirmOverlay.classList.add('open');
+    setF6Focus('no');
+  }
+
+  function closeF6Confirm() {
+    f6ConfirmOverlay.classList.remove('open');
+    focusSearch();
+  }
+
+  function openF6Success() {
+    f6SuccessOverlay.classList.add('open');
+    f6OkBtn.focus();
+  }
+
+  function closeF6Success() {
+    f6SuccessOverlay.classList.remove('open');
+    cart = {};
+    cartOrder = [];
+    renderCart();
+    focusSearch();
+  }
+
+  async function performQuickHold() {
+    const items = cartOrder.map(id => cart[id]).filter(Boolean);
+    if (!items.length) return;
+
+    const totalAmount = items.reduce((sum, i) => sum + i.qty * getUnitPrice(i.product), 0);
+    const cartData = items.map(i => ({ productId: i.product.id, qty: i.qty }));
+
+    const { error } = await sb.from('held_bills').insert({
+      shop_id: profile.shop_id,
+      folder_name: 'Quick Hold',
+      cart_data: cartData,
+      item_count: items.length,
+      total_amount: totalAmount,
+      created_by: profile.id
+    });
+
+    if (error) {
+      showToast('Failed to hold bill: ' + error.message);
+      closeF6Confirm();
+      return;
+    }
+
+    await loadHeldBills();
+    closeF6Confirm();
+    openF6Success();
+  }
+
+  f6YesBtn.addEventListener('click', () => {
+    performQuickHold();
+  });
+  f6NoBtn.addEventListener('click', () => {
+    closeF6Confirm();
+  });
+  f6OkBtn.addEventListener('click', () => {
+    closeF6Success();
+  });
+
+  // ============================================================
+  // F7 — Held bills list (70vh overlay)
+  // ============================================================
+  const f7Overlay = document.getElementById('f7-overlay');
+
+  function renderF7List() {
+    const tbody = document.getElementById('f7-tbody');
+    const empty = document.getElementById('f7-empty');
+    if (!heldBills.length) {
+      tbody.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    tbody.innerHTML = heldBills.map(h => {
+      const num = String(h.id).slice(0, 8);
+      const dateLabel = new Date(h.created_at).toLocaleString('en-GB', {
+        day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+      });
+      return `
+        <tr onclick="resumeHeldBill('${h.id}')">
+          <td>${h.folder_name || '—'}</td>
+          <td>${num}</td>
+          <td>${h.item_count}</td>
+          <td>৳${Number(h.total_amount).toFixed(2)}</td>
+          <td>${dateLabel}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function openF7Panel() {
+    renderF7List();
+    f7Overlay.classList.add('open');
+  }
+
+  function closeF7Panel() {
+    f7Overlay.classList.remove('open');
+    focusSearch();
+  }
+
+  function toggleF7Panel() {
+    if (f7Overlay.classList.contains('open')) closeF7Panel();
+    else openF7Panel();
+  }
+
+  document.getElementById('f7-close-btn').addEventListener('click', closeF7Panel);
+  f7Overlay.addEventListener('click', (e) => {
+    if (e.target === f7Overlay) closeF7Panel();
+  });
+
+  // ============================================================
+  // Empty-Enter product search overlay
+  // ============================================================
+  const prodsearchOverlay = document.getElementById('prodsearch-overlay');
+  const prodsearchInput = document.getElementById('prodsearch-input');
+  const prodsearchList = document.getElementById('prodsearch-list');
+
+  function filterProducts(q) {
+    const query = (q || '').trim().toLowerCase();
+    if (!query) return products.slice(0, 50);
+    return products.filter(p =>
+      (p.name || '').toLowerCase().includes(query) ||
+      (p.code || '').toLowerCase().includes(query)
+    ).slice(0, 50);
+  }
+
+  function renderProdsearchList() {
+    prodsearchFiltered = filterProducts(prodsearchInput.value);
+    if (!prodsearchFiltered.length) {
+      prodsearchList.innerHTML = '<div class="prodsearch-empty">No products match.</div>';
+      return;
+    }
+    if (prodsearchHighlight >= prodsearchFiltered.length) prodsearchHighlight = 0;
+    prodsearchList.innerHTML = prodsearchFiltered.map((p, i) => {
+      const unitPrice = getUnitPrice(p);
+      return `
+        <div class="prodsearch-item${i === prodsearchHighlight ? ' highlighted' : ''}" data-idx="${i}" onclick="selectProdsearchItem(${i})">
+          <div>
+            <div class="ps-name">${p.name}</div>
+            <div class="ps-meta">#${p.code || '—'} · ${p.unit || 'pcs'}</div>
+          </div>
+          <div class="ps-price">৳${Number(unitPrice).toFixed(2)}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  window.selectProdsearchItem = function(idx) {
+    const p = prodsearchFiltered[idx];
+    if (!p) return;
+    addProductToCart(p);
+    closeProductSearch();
+  };
+
+  function openProductSearch() {
+    prodsearchInput.value = '';
+    prodsearchHighlight = 0;
+    renderProdsearchList();
+    prodsearchOverlay.classList.add('open');
+    setTimeout(() => prodsearchInput.focus(), 50);
+  }
+
+  function closeProductSearch() {
+    prodsearchOverlay.classList.remove('open');
+    focusSearch();
+  }
+
+  document.getElementById('prodsearch-close-btn').addEventListener('click', closeProductSearch);
+  prodsearchOverlay.addEventListener('click', (e) => {
+    if (e.target === prodsearchOverlay) closeProductSearch();
+  });
+
+  prodsearchInput.addEventListener('input', () => {
+    prodsearchHighlight = 0;
+    renderProdsearchList();
+  });
+
+  prodsearchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeProductSearch();
+      return;
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (prodsearchFiltered.length) {
+        prodsearchHighlight = (prodsearchHighlight + 1) % prodsearchFiltered.length;
+        renderProdsearchList();
+      }
+      return;
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (prodsearchFiltered.length) {
+        prodsearchHighlight = (prodsearchHighlight - 1 + prodsearchFiltered.length) % prodsearchFiltered.length;
+        renderProdsearchList();
+      }
+      return;
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (prodsearchFiltered.length) {
+        selectProdsearchItem(prodsearchHighlight);
+      }
+    }
+  });
+
+  // ============================================================
+  // Global keyboard shortcuts: F6, F7, Space
+  // ============================================================
+  document.addEventListener('keydown', (e) => {
+    // F6 — quick hold confirm
+    if (e.key === 'F6') {
+      e.preventDefault();
+      // If any other overlay is open that isn't F6, ignore or close first
+      if (f6ConfirmOverlay.classList.contains('open')) return;
+      if (f6SuccessOverlay.classList.contains('open')) return;
+      openF6Confirm();
+      return;
+    }
+
+    // F7 — held bills list toggle
+    if (e.key === 'F7') {
+      e.preventDefault();
+      if (f6ConfirmOverlay.classList.contains('open') || f6SuccessOverlay.classList.contains('open')) return;
+      toggleF7Panel();
+      return;
+    }
+
+    // Space — open payment (search box or page; not qty/folder/prodsearch inputs)
+    if (e.key === ' ' || e.code === 'Space') {
+      const active = document.activeElement;
+      const isSearch = active && active.id === 'search';
+      const tag = active && active.tagName ? active.tagName.toLowerCase() : '';
+      const isOtherTextInput = (tag === 'input' || tag === 'textarea' || tag === 'select') && !isSearch;
+      if (isOtherTextInput) return;
+      if (cartOrder.length === 0) return;
+      if (document.getElementById('modal-overlay').classList.contains('open')) return;
+      if (f6ConfirmOverlay.classList.contains('open')) return;
+      if (f6SuccessOverlay.classList.contains('open')) return;
+      if (prodsearchOverlay.classList.contains('open')) return;
+      if (f7Overlay.classList.contains('open')) return;
+      if (holdOverlay.classList.contains('open')) return;
+      e.preventDefault();
+      openPaymentModal(true);
+      return;
+    }
+
+    // F6 dialog keyboard navigation
+    if (f6ConfirmOverlay.classList.contains('open')) {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setF6Focus('yes');
+        return;
+      }
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        setF6Focus('no');
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (f6FocusChoice === 'yes') performQuickHold();
+        else closeF6Confirm();
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeF6Confirm();
+        return;
+      }
+    }
+
+    if (f6SuccessOverlay.classList.contains('open')) {
+      if (e.key === 'Enter' || e.key === 'Escape') {
+        e.preventDefault();
+        closeF6Success();
+        return;
+      }
+    }
+
+    if (f7Overlay.classList.contains('open') && e.key === 'Escape') {
+      e.preventDefault();
+      closeF7Panel();
+    }
   });
 
   init();
