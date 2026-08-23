@@ -1,122 +1,155 @@
 /* ============================================================
-   BillOS — Shared Desktop Layout Injection
-   Injects a left sidebar (visible only on wide screens, styled
-   by layout.css) as the first element in <body>. No existing
-   page markup needs to change for this to work.
-
-   Sidebar is collapsible: collapses after nav-link click,
-   expands via the ⋮ toggle button. State persisted in
-   localStorage under key "billos-sidebar-state".
+   BillOS — Shared Desktop Sidebar
+   Injects the desktop sidebar into every page that loads this
+   script. Existing mobile bottom navigation remains untouched.
    ============================================================ */
 
 (function () {
-  const NAV_ITEMS = [
-    { file: 'dashboard.html', icon: '🏠', label: 'Dashboard' },
-    { file: 'billing.html',   icon: '🛒', label: 'Billing' },
-    { file: 'inventory.html', icon: '📦', label: 'Inventory' },
-    { file: 'bills.html',     icon: '🧾', label: 'Bills' },
-    { file: 'analytics.html', icon: '📊', label: 'Analytics' },
-    { file: 'reports.html',   icon: '📈', label: 'Reports' },
+  "use strict";
+
+  const SIDEBAR_STATE_KEY = "billos-sidebar-state";
+
+  const navItems = [
+    { icon: "⌂", label: "Dashboard", href: "index.html" },
+    { icon: "▣", label: "Billing", href: "billing.html" },
+    { icon: "▤", label: "Products", href: "products.html" },
+    { icon: "◉", label: "Customers", href: "customers.html" },
+    { icon: "▥", label: "Reports", href: "reports.html" },
+    { icon: "⚙", label: "Settings", href: "settings.html" }
   ];
 
-  // Login/demo pages don't get the app sidebar — they aren't "inside" the app yet.
-  const PAGES_WITHOUT_SIDEBAR = ['', 'index.html', 'login.html', 'demo.html'];
-  const STORAGE_KEY = 'billos-sidebar-state';
+  function getCurrentPage() {
+    const path = window.location.pathname.split("/").pop();
 
-  function currentPageFile() {
-    return window.location.pathname.split('/').pop();
+    return path || "index.html";
   }
 
-  function isCollapsed() {
-    return localStorage.getItem(STORAGE_KEY) === 'collapsed';
-  }
+  function createSidebar() {
+    if (document.querySelector(".app-sidebar")) return;
 
-  function setCollapsed(collapsed) {
-    localStorage.setItem(STORAGE_KEY, collapsed ? 'collapsed' : 'expanded');
-    const sidebar = document.querySelector('.app-sidebar');
-    if (sidebar) {
-      if (collapsed) {
-        sidebar.classList.add('collapsed');
-        document.body.classList.add('sidebar-collapsed');
-      } else {
-        sidebar.classList.remove('collapsed');
-        document.body.classList.remove('sidebar-collapsed');
-      }
-    }
-  }
+    const sidebar = document.createElement("aside");
+    sidebar.className = "app-sidebar";
 
-  function collapseSidebar() {
-    setCollapsed(true);
-  }
+    const currentPage = getCurrentPage();
 
-  function expandSidebar() {
-    setCollapsed(false);
-  }
-
-  function buildSidebar() {
-    const current = currentPageFile();
-    if (PAGES_WITHOUT_SIDEBAR.includes(current)) return;
-
-    const linksHtml = NAV_ITEMS.map(item => `
-      <a href="${item.file}" class="app-sidebar-link${item.file === current ? ' active' : ''}">
-        <span class="app-sidebar-icon">${item.icon}</span>${item.label}
-      </a>
-    `).join('');
-
-    const sidebar = document.createElement('div');
-    sidebar.className = 'app-sidebar glass';
     sidebar.innerHTML = `
       <div class="app-sidebar-brand">
         <div class="app-sidebar-logo">B</div>
         <div class="app-sidebar-brand-name">BillOS</div>
       </div>
-      <nav class="app-sidebar-nav">${linksHtml}</nav>
-      <div class="app-sidebar-logout" onclick="window.__billosSidebarLogout()">⏻ Logout</div>
+
+      <nav class="app-sidebar-nav">
+        ${navItems.map(item => `
+          <a
+            class="app-sidebar-link ${
+              currentPage === item.href ? "active" : ""
+            }"
+            href="${item.href}"
+          >
+            <span class="app-sidebar-icon">${item.icon}</span>
+            <span>${item.label}</span>
+          </a>
+        `).join("")}
+      </nav>
+
+      <div class="app-sidebar-logout" id="sidebarLogout">
+        <span class="app-sidebar-icon">↪</span>
+        <span>Logout</span>
+      </div>
     `;
+
     document.body.prepend(sidebar);
 
-    // Toggle button (⋮) — fixed on left edge when sidebar is collapsed
-    const toggle = document.createElement('button');
-    toggle.className = 'app-sidebar-toggle';
-    toggle.type = 'button';
-    toggle.setAttribute('aria-label', 'Open sidebar');
-    toggle.textContent = '⋮';
-    toggle.addEventListener('click', function (e) {
-      e.preventDefault();
-      expandSidebar();
-    });
-    document.body.appendChild(toggle);
+    createToggleButton();
+    restoreSidebarState();
 
-    // Collapse after any nav link is clicked (even same-page)
-    sidebar.querySelectorAll('.app-sidebar-link').forEach(function (link) {
-      link.addEventListener('click', function () {
-        collapseSidebar();
-      });
-    });
+    const logout = document.getElementById("sidebarLogout");
 
-    // Restore persisted state
-    if (isCollapsed()) {
-      sidebar.classList.add('collapsed');
-      document.body.classList.add('sidebar-collapsed');
+    if (logout) {
+      logout.addEventListener("click", handleLogout);
     }
   }
 
-  // Reuses whatever Supabase client each page already created (every page
-  // declares `const sb = createClient(...)`; top-level const/let is shared
-  // across script tags in the same document, so this resolves at click time).
-  window.__billosSidebarLogout = async function () {
-    try {
-      if (typeof sb !== 'undefined' && sb?.auth) {
-        await sb.auth.signOut();
-      }
-    } finally {
-      window.location.href = 'index.html';
-    }
-  };
+  function createToggleButton() {
+    if (document.querySelector(".app-sidebar-toggle")) return;
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', buildSidebar);
+    const button = document.createElement("button");
+
+    button.className = "app-sidebar-toggle";
+    button.type = "button";
+    button.setAttribute("aria-label", "Open sidebar");
+    button.innerHTML = "☰";
+
+    document.body.appendChild(button);
+
+    button.addEventListener("click", toggleSidebar);
+  }
+
+  function toggleSidebar() {
+    const sidebar = document.querySelector(".app-sidebar");
+
+    if (!sidebar) return;
+
+    const isCollapsed = document.body.classList.toggle(
+      "sidebar-collapsed"
+    );
+
+    sidebar.classList.toggle("collapsed", isCollapsed);
+
+    localStorage.setItem(
+      SIDEBAR_STATE_KEY,
+      isCollapsed ? "collapsed" : "open"
+    );
+  }
+
+  function restoreSidebarState() {
+    const sidebar = document.querySelector(".app-sidebar");
+
+    if (!sidebar) return;
+
+    const savedState = localStorage.getItem(
+      SIDEBAR_STATE_KEY
+    );
+
+    if (savedState === "collapsed") {
+      document.body.classList.add("sidebar-collapsed");
+      sidebar.classList.add("collapsed");
+    }
+  }
+
+  function handleLogout() {
+    /*
+      Keep this compatible with the existing authentication
+      implementation. If the project already has a logout
+      function, use it.
+    */
+
+    if (typeof window.logout === "function") {
+      window.logout();
+      return;
+    }
+
+    if (typeof window.signOut === "function") {
+      window.signOut();
+      return;
+    }
+
+    /*
+      Fallback: redirect to the login page.
+      Change this only if the existing project uses another
+      login route.
+    */
+    window.location.href = "login.html";
+  }
+
+  function init() {
+    createSidebar();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
   } else {
-    buildSidebar();
+    init();
   }
+
 })();
