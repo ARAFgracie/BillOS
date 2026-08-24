@@ -100,12 +100,13 @@
   const SUPABASE_ANON_KEY = "sb_publishable_yTDG8ujXgVE81BNAvPvZlw_tlbfKNTm";
   const { createClient } = supabase;
   const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  window.sb = sb;
 
   let shopId = null;
 
   async function init() {
     const { data: { session } } = await sb.auth.getSession();
-    if (!session) { window.location.href = 'login.html'; return; }
+    if (!session) { window.location.href = 'index.html'; return; }
 
     const { data: profile, error } = await sb
       .from('profiles')

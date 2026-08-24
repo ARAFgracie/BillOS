@@ -10,12 +10,12 @@
   const SIDEBAR_STATE_KEY = "billos-sidebar-state";
 
   const navItems = [
-    { icon: "⌂", label: "Dashboard", href: "index.html" },
+    { icon: "⌂", label: "Dashboard", href: "dashboard.html" },
     { icon: "▣", label: "Billing", href: "billing.html" },
-    { icon: "▤", label: "Products", href: "products.html" },
-    { icon: "◉", label: "Customers", href: "customers.html" },
-    { icon: "▥", label: "Reports", href: "reports.html" },
-    { icon: "⚙", label: "Settings", href: "settings.html" }
+    { icon: "▤", label: "Inventory", href: "inventory.html" },
+    { icon: "🧾", label: "Bills", href: "bills.html" },
+    { icon: "📊", label: "Analytics", href: "analytics.html" },
+    { icon: "▥", label: "Reports", href: "reports.html" }
   ];
 
   function getCurrentPage() {
@@ -134,12 +134,19 @@
       return;
     }
 
+    if (window.sb && window.sb.auth && typeof window.sb.auth.signOut === "function") {
+      window.sb.auth.signOut().finally(() => {
+        window.location.href = "index.html";
+      });
+      return;
+    }
+
     /*
       Fallback: redirect to the login page.
       Change this only if the existing project uses another
       login route.
     */
-    window.location.href = "login.html";
+    window.location.href = "index.html";
   }
 
   function init() {
