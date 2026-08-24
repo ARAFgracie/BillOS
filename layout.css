@@ -29,6 +29,9 @@
     border-top:none;
     border-bottom:none;
     border-left:none;
+    background:var(--card);
+    border-right:1px solid var(--border);
+    box-shadow:4px 0 28px rgba(0,0,0,0.08);
     transform:translateX(0);
     transition:transform 0.25s ease;
   }
@@ -44,7 +47,13 @@
     color:#fff; font-weight:800;
     flex-shrink:0;
   }
-  .app-sidebar-brand-name{ font-weight:800; font-size:17px; color:var(--ink); }
+  .app-sidebar-brand-name{ font-weight:800; font-size:17px; color:var(--ink); flex:1; }
+  .app-sidebar-collapse-btn{
+    width:26px; height:26px; border-radius:8px; border:1px solid var(--border);
+    background:transparent; color:var(--muted); cursor:pointer; font-size:13px;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .app-sidebar-collapse-btn:hover{ background:rgba(127,127,127,0.12); color:var(--ink); }
 
   .app-sidebar-nav{ display:flex; flex-direction:column; gap:2px; flex:1; }
   .app-sidebar-link{
@@ -90,21 +99,32 @@
     display:flex;
   }
 
-  /* ---------- Shift existing page content to make room ---------- */
-  body{
+  /* ---------- Shift existing page content to make room ----------
+     NOTE: uses "html body" (not just "body") on purpose. Every page
+     has its own inline <style> with body{ margin:0 } that loads
+     AFTER this file, and at equal specificity source order wins —
+     silently cancelling this shift and causing the sidebar to
+     overlap page content. The extra "html" bumps specificity so
+     this rule always wins regardless of per-page CSS. */
+  html body{
     margin-left:230px;
     transition:margin-left 0.25s ease;
   }
-  body.sidebar-collapsed{
+  html body.sidebar-collapsed{
     margin-left:0;
   }
-  .cart-bar{
+  html .cart-bar{
     left:230px;
     transition:left 0.25s ease;
   }
-  body.sidebar-collapsed .cart-bar{
+  html body.sidebar-collapsed .cart-bar{
     left:0;
   }
+
+  /* Hide each page's own inline logo/wordmark on desktop — the
+     sidebar already shows the BillOS brand, so the topbar's copy
+     was rendering on top of it (the duplicate text in screenshots). */
+  html .topbar .brand{ display:none; }
 
   /* Mobile bottom navigation is replaced by the sidebar on desktop */
   .bottom-nav{ display:none !important; }

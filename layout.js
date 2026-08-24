@@ -36,6 +36,7 @@
       <div class="app-sidebar-brand">
         <div class="app-sidebar-logo">B</div>
         <div class="app-sidebar-brand-name">BillOS</div>
+        <button type="button" class="app-sidebar-collapse-btn" id="sidebarCollapseBtn" aria-label="Collapse sidebar">«</button>
       </div>
 
       <nav class="app-sidebar-nav">
@@ -62,6 +63,11 @@
 
     createToggleButton();
     restoreSidebarState();
+
+    const collapseBtn = document.getElementById("sidebarCollapseBtn");
+    if (collapseBtn) {
+      collapseBtn.addEventListener("click", toggleSidebar);
+    }
 
     const logout = document.getElementById("sidebarLogout");
 

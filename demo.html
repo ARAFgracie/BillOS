@@ -3,132 +3,443 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>BillOS — Demo Overview</title>
+<title>BillOS — See it before you set it up</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<link rel="stylesheet" href="theme.css">
-<script src="theme.js"></script>
-<link rel="stylesheet" href="layout.css">
-<script src="layout.js" defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  *{box-sizing:border-box;}
+  /* ============================================================
+     BillOS — Live Preview (demo.html)
+     Self-contained glass showroom. No auth, no live data, no
+     write access to the real product — this page only shows
+     what BillOS looks like and captures a setup request at the
+     end. Intentionally does NOT use theme.css / layout.js: this
+     is a fixed-mood showcase, not an app screen.
+     ============================================================ */
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html{ scroll-behavior:smooth; }
   body{
-    margin:0; min-height:100vh;
-    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin:0; min-height:100vh; color:#EEF2F6;
+    font-family:'Inter', -apple-system, sans-serif;
+    background:
+      radial-gradient(1100px 700px at 12% -10%, rgba(34,197,94,0.28), transparent 60%),
+      radial-gradient(900px 650px at 110% 15%, rgba(139,92,246,0.24), transparent 55%),
+      radial-gradient(1000px 800px at 50% 120%, rgba(45,212,191,0.18), transparent 60%),
+      #070B14;
+    overflow-x:hidden;
+  }
+  h1,h2,h3,.display{ font-family:'Sora', sans-serif; }
+  ::selection{ background:rgba(34,197,94,0.35); }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.001ms !important; transition-duration:0.001ms !important; }
   }
 
+  /* ---------- Ambient floating orbs (subtle, no gimmick) ---------- */
+  .orb{ position:fixed; border-radius:50%; filter:blur(60px); opacity:0.35; pointer-events:none; z-index:0; }
+  .orb1{ width:340px; height:340px; top:-80px; left:-100px; background:#22C55E; animation:float1 16s ease-in-out infinite; }
+  .orb2{ width:280px; height:280px; top:40%; right:-120px; background:#8B5CF6; animation:float2 19s ease-in-out infinite; }
+  @keyframes float1{ 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(40px) } }
+  @keyframes float2{ 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-50px) } }
+
+  /* ---------- Topbar ---------- */
   .topbar{
-    display:flex; align-items:center; gap:12px;
-    padding:20px 24px;
+    position:relative; z-index:5;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:20px 22px; max-width:1000px; margin:0 auto;
   }
+  .brand{ display:flex; align-items:center; gap:10px; }
   .logo{
-    width:44px; height:44px;
-    background:linear-gradient(135deg, var(--blue), #34D399);
-    border-radius:12px;
+    width:38px; height:38px; border-radius:11px;
+    background:linear-gradient(135deg, #22C55E, #2DD4BF);
     display:flex; align-items:center; justify-content:center;
-    color:#fff; font-weight:800; font-size:20px;
-    box-shadow:0 4px 12px rgba(34,197,94,0.35);
+    font-weight:800; color:#04140A; font-family:'Sora', sans-serif;
   }
-  .brand{ font-size:22px; font-weight:800; }
-  .demo-tag{
-    margin-left:auto;
-    font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.4px;
-    color:var(--blue);
-    background:rgba(34,197,94,0.1);
-    padding:6px 12px;
-    border-radius:20px;
+  .brand-name{ font-weight:700; font-size:17px; letter-spacing:0.2px; }
+  .demo-pill{
+    font-size:11px; font-weight:700; letter-spacing:0.4px; text-transform:uppercase;
+    padding:6px 12px; border-radius:20px; color:#B8F5CE;
+    background:rgba(34,197,94,0.14); border:1px solid rgba(34,197,94,0.35);
   }
 
-  .wrap{ max-width:520px; margin:0 auto; padding:10px 20px 40px; }
-  .hero-head{ text-align:center; margin-bottom:26px; }
-  .hero-head h1{ font-size:24px; margin:0 0 8px; }
-  .hero-head p{ font-size:14px; color:var(--muted); margin:0; line-height:1.5; }
-
-  .feature-card{
-    display:flex; align-items:flex-start; gap:14px;
-    border-radius:18px; padding:16px 18px; margin-bottom:12px;
+  /* ---------- Hero ---------- */
+  .hero{ position:relative; z-index:2; max-width:720px; margin:26px auto 8px; padding:0 24px; text-align:center; }
+  .hero h1{ font-size:34px; line-height:1.15; margin:0 0 12px; font-weight:800; }
+  .hero h1 span{ color:#4ADE80; }
+  .hero p{ font-size:15px; color:#9FB0C3; line-height:1.6; margin:0 auto; max-width:520px; }
+  .swipe-hint{
+    margin-top:22px; font-size:12.5px; color:#7C8CA0; font-weight:600;
+    display:flex; align-items:center; justify-content:center; gap:8px;
   }
-  .feature-icon{
-    width:42px; height:42px; border-radius:12px; flex-shrink:0;
-    background:rgba(34,197,94,0.12);
+  .swipe-hint .arrow{ display:inline-block; animation:nudge 1.6s ease-in-out infinite; }
+  @keyframes nudge{ 0%,100%{ transform:translateX(0) } 50%{ transform:translateX(6px) } }
+
+  /* ============================================================
+     CAROUSEL — one glass "floating tablet" per app screen
+     ============================================================ */
+  .carousel-wrap{ position:relative; z-index:2; padding:34px 0 10px; }
+  .carousel{
+    display:flex; gap:18px; overflow-x:auto; scroll-snap-type:x mandatory;
+    padding:10px 26px 26px; scrollbar-width:none;
+  }
+  .carousel::-webkit-scrollbar{ display:none; }
+  .slide{
+    scroll-snap-align:center; flex:0 0 auto;
+    width:min(320px, 82vw);
+    display:flex; flex-direction:column; gap:16px;
+  }
+
+  /* the "floating tablet" mockup card */
+  .tablet{
+    position:relative; border-radius:22px; padding:16px;
+    background:rgba(255,255,255,0.06);
+    border:1px solid rgba(255,255,255,0.14);
+    backdrop-filter:blur(22px) saturate(160%);
+    -webkit-backdrop-filter:blur(22px) saturate(160%);
+    box-shadow:
+      inset 0 1px 1px rgba(255,255,255,0.18),
+      0 24px 50px -18px rgba(0,0,0,0.65),
+      0 0 0 1px rgba(255,255,255,0.02);
+    transform:perspective(900px) rotateY(-6deg) rotateX(2deg);
+    transition:transform 0.4s ease;
+    min-height:230px;
+  }
+  .slide:hover .tablet, .slide:focus-within .tablet{ transform:perspective(900px) rotateY(0deg) rotateX(0deg); }
+  .tablet-glow{
+    position:absolute; inset:-1px; border-radius:22px; z-index:-1; opacity:0.55; filter:blur(18px);
+  }
+  .tablet-head{ display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+  .tablet-icon{
+    width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center;
+    font-size:14px; flex-shrink:0;
+  }
+  .tablet-title{ font-size:12.5px; font-weight:700; color:#E7EDF3; }
+
+  /* ---------- mini mockup UI fragments (per-screen, distinct) ---------- */
+  .mini-stat-row{ display:flex; gap:6px; margin-bottom:10px; }
+  .mini-stat{ flex:1; border-radius:10px; padding:8px 9px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); }
+  .mini-stat .n{ font-size:13px; font-weight:800; }
+  .mini-stat .l{ font-size:8px; color:#8598AC; text-transform:uppercase; letter-spacing:0.3px; margin-top:2px; }
+  .mini-line{ height:5px; border-radius:3px; background:rgba(255,255,255,0.09); margin-bottom:6px; }
+  .mini-chart{ display:flex; align-items:flex-end; gap:5px; height:52px; margin-top:8px; }
+  .mini-chart div{ flex:1; border-radius:4px 4px 0 0; background:linear-gradient(180deg, currentColor, transparent); opacity:0.75; }
+  .mini-row{ display:flex; justify-content:space-between; align-items:center; padding:7px 8px; border-radius:9px; background:rgba(255,255,255,0.045); margin-bottom:6px; font-size:10.5px; }
+  .mini-row .amt{ font-weight:700; }
+  .mini-badge{ font-size:8px; font-weight:800; padding:2px 6px; border-radius:8px; text-transform:uppercase; }
+  .mini-search{ height:26px; border-radius:8px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.09); margin-bottom:10px; }
+  .mini-filters{ display:flex; gap:6px; margin-bottom:10px; }
+  .mini-filters span{ font-size:8.5px; font-weight:700; padding:5px 9px; border-radius:14px; background:rgba(255,255,255,0.06); }
+  .mini-filters span.on{ color:#04140A; }
+
+  /* ---------- explanation card ---------- */
+  .explain{
+    border-radius:18px; padding:16px 17px;
+    background:rgba(255,255,255,0.045);
+    border:1px solid rgba(255,255,255,0.09);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+  }
+  .explain .eyebrow{ font-size:10px; font-weight:800; letter-spacing:0.5px; text-transform:uppercase; margin-bottom:6px; }
+  .explain h3{ margin:0 0 6px; font-size:16px; font-weight:700; }
+  .explain p{ margin:0; font-size:12.5px; line-height:1.55; color:#A9B8C9; }
+
+  /* ---------- dots + arrows ---------- */
+  .carousel-nav{ display:flex; align-items:center; justify-content:center; gap:14px; position:relative; z-index:2; margin-top:4px; }
+  .nav-btn{
+    width:34px; height:34px; border-radius:50%; border:1px solid rgba(255,255,255,0.16);
+    background:rgba(255,255,255,0.06); color:#EEF2F6; font-size:14px; cursor:pointer;
     display:flex; align-items:center; justify-content:center;
-    font-size:19px;
+    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
   }
-  .feature-title{ font-weight:800; font-size:14.5px; margin-bottom:3px; }
-  .feature-desc{ font-size:12.5px; color:var(--muted); line-height:1.4; }
+  .nav-btn:hover{ background:rgba(255,255,255,0.12); }
+  .dots{ display:flex; gap:7px; }
+  .dot{ width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,0.22); transition:all 0.25s ease; }
+  .dot.active{ width:20px; border-radius:4px; background:#4ADE80; }
 
-  .enter-btn{
-    display:block; width:100%; text-align:center; text-decoration:none;
-    margin-top:22px;
-    padding:15px 0;
-    border-radius:14px;
-    background:linear-gradient(135deg, var(--blue), #22C55E);
-    color:#fff; font-weight:800; font-size:15px;
-    box-shadow:0 8px 24px rgba(34,197,94,0.3);
+  /* ============================================================
+     CTA — Request Setup (only reachable after the tour)
+     ============================================================ */
+  .cta-section{ position:relative; z-index:2; max-width:520px; margin:56px auto 40px; padding:0 22px; }
+  .cta-card{
+    border-radius:26px; padding:30px 26px 26px;
+    background:rgba(255,255,255,0.055);
+    border:1px solid rgba(255,255,255,0.13);
+    backdrop-filter:blur(26px) saturate(160%);
+    -webkit-backdrop-filter:blur(26px) saturate(160%);
+    box-shadow:inset 0 1px 1px rgba(255,255,255,0.15), 0 30px 60px -20px rgba(0,0,0,0.6);
+    text-align:center;
   }
-  .skip-note{ text-align:center; font-size:11.5px; color:var(--muted); margin-top:12px; }
+  .cta-card .cta-icon{
+    width:52px; height:52px; margin:0 auto 16px; border-radius:16px;
+    background:linear-gradient(135deg, #22C55E, #2DD4BF);
+    display:flex; align-items:center; justify-content:center; font-size:22px;
+  }
+  .cta-card h2{ font-size:21px; margin:0 0 8px; }
+  .cta-card p{ font-size:13px; color:#9FB0C3; margin:0 0 22px; line-height:1.55; }
+
+  .cta-form{ text-align:left; display:none; }
+  .cta-form.open{ display:block; }
+  .cta-form label{ display:block; font-size:10.5px; font-weight:700; color:#8598AC; text-transform:uppercase; letter-spacing:0.3px; margin-bottom:6px; }
+  .cta-form input{
+    width:100%; padding:12px 13px; margin-bottom:13px; border-radius:12px;
+    border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.05);
+    color:#EEF2F6; font-size:15px; outline:none;
+  }
+  .cta-form input::placeholder{ color:#5D6E82; }
+  .cta-form input:focus{ border-color:#4ADE80; }
+  .cta-primary-btn, .cta-submit-btn{
+    width:100%; padding:14px 0; border:none; border-radius:14px; cursor:pointer;
+    background:linear-gradient(135deg, #22C55E, #16A34A); color:#04140A;
+    font-weight:800; font-size:14.5px; font-family:'Sora', sans-serif;
+  }
+  .cta-primary-btn:focus-visible, .cta-submit-btn:focus-visible, .nav-btn:focus-visible{ outline:2px solid #4ADE80; outline-offset:2px; }
+  .cta-msg{ margin-top:12px; font-size:12.5px; padding:10px; border-radius:10px; display:none; }
+  .cta-msg.error{ display:block; background:rgba(220,38,38,0.15); color:#FCA5A5; }
+  .cta-msg.success{ display:block; background:rgba(34,197,94,0.15); color:#86EFAC; }
+
+  .foot-note{ text-align:center; font-size:11.5px; color:#5D6E82; padding:0 24px 40px; position:relative; z-index:2; }
+  .foot-note a{ color:#4ADE80; text-decoration:none; font-weight:600; }
 </style>
 </head>
 <body>
 
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
 <div class="topbar">
-  <div class="logo">B</div>
-  <div class="brand">BillOS</div>
-  <div class="demo-tag">Demo Mode</div>
-  <div class="theme-switcher">
-    <div class="theme-toggle glass" id="theme-toggle" onclick="toggleThemeMenu()">🎨</div>
-    <div class="theme-menu glass" id="theme-menu"></div>
+  <div class="brand">
+    <div class="logo">B</div>
+    <div class="brand-name">BillOS</div>
+  </div>
+  <div class="demo-pill">Live Preview</div>
+</div>
+
+<div class="hero">
+  <h1>See how BillOS runs a <span>shop counter</span> — before you set one up.</h1>
+  <p>This is a look-around, not a login. Swipe through every screen, then request a setup and we'll get your shop live with real data.</p>
+  <div class="swipe-hint">Swipe to explore <span class="arrow">→</span></div>
+</div>
+
+<div class="carousel-wrap">
+  <div class="carousel" id="carousel"></div>
+  <div class="carousel-nav">
+    <button class="nav-btn" id="prevBtn" aria-label="Previous screen">‹</button>
+    <div class="dots" id="dots"></div>
+    <button class="nav-btn" id="nextBtn" aria-label="Next screen">›</button>
   </div>
 </div>
 
-<div class="wrap">
-  <div class="hero-head">
-    <h1>Welcome to the BillOS demo</h1>
-    <p>A quick look at everything you can do — then jump straight into the dashboard with sample data already loaded.</p>
-  </div>
-
-  <div class="feature-card glass">
-    <div class="feature-icon">🛒</div>
-    <div>
-      <div class="feature-title">Billing</div>
-      <div class="feature-desc">Type a product code and hit Enter to build a bill fast — just like a real POS counter.</div>
+<div class="cta-section">
+  <div class="cta-card">
+    <div id="cta-default">
+      <div class="cta-icon">🚀</div>
+      <h2>Ready to bring this to your shop?</h2>
+      <p>Tell us a little about your shop and we'll reach out to get BillOS set up with your real products and staff — no shared demo account, no sample data mixed with yours.</p>
+      <button type="button" class="cta-primary-btn" id="showFormBtn">Request Setup</button>
     </div>
-  </div>
 
-  <div class="feature-card glass">
-    <div class="feature-icon">📦</div>
-    <div>
-      <div class="feature-title">Inventory</div>
-      <div class="feature-desc">Add, edit, and track stock levels, with automatic low-stock and out-of-stock alerts.</div>
-    </div>
+    <form class="cta-form" id="cta-form">
+      <label for="lead-name">Your Name</label>
+      <input type="text" id="lead-name" placeholder="Full name" required>
+      <label for="lead-shop">Shop Name</label>
+      <input type="text" id="lead-shop" placeholder="e.g. Rahman General Store" required>
+      <label for="lead-phone">Phone Number</label>
+      <input type="tel" id="lead-phone" placeholder="01XXXXXXXXX" required>
+      <label for="lead-email">Email</label>
+      <input type="email" id="lead-email" placeholder="you@shop.com" required>
+      <button type="submit" class="cta-submit-btn" id="lead-submit-btn">Send Request</button>
+      <div class="cta-msg" id="cta-msg"></div>
+    </form>
   </div>
-
-  <div class="feature-card glass">
-    <div class="feature-icon">🧾</div>
-    <div>
-      <div class="feature-title">Bills</div>
-      <div class="feature-desc">Every completed sale is saved here automatically, with payment method and time.</div>
-    </div>
-  </div>
-
-  <div class="feature-card glass">
-    <div class="feature-icon">📊</div>
-    <div>
-      <div class="feature-title">Analytics</div>
-      <div class="feature-desc">See total revenue and which products are actually selling, at a glance.</div>
-    </div>
-  </div>
-
-  <div class="feature-card glass">
-    <div class="feature-icon">📈</div>
-    <div>
-      <div class="feature-title">Reports</div>
-      <div class="feature-desc">Filter sales by Today, This Week, or This Month to see how the shop is doing.</div>
-    </div>
-  </div>
-
-  <a href="dashboard.html" class="enter-btn">Enter Dashboard →</a>
-  <div class="skip-note">You're using a shared demo shop — data here may reset for the next visitor.</div>
 </div>
+
+<div class="foot-note">Already have an account? <a href="index.html">Log in here</a></div>
+
+<script>
+  const SUPABASE_URL = "https://ektdcnvraluuwxmqhjvj.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_yTDG8ujXgVE81BNAvPvZlw_tlbfKNTm";
+  const { createClient } = supabase;
+  const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  /* ============================================================
+     Screen data — one entry per real BillOS page.
+     Each mockup is hand-built CSS, not a live screenshot, so this
+     page has zero dependency on real data or auth.
+     ============================================================ */
+  const screens = [
+    {
+      key: 'dashboard', accent: '#22C55E', icon: '⌂',
+      title: 'Dashboard', eyebrow: 'Every morning, one glance',
+      copy: "Today's sales, bills, and low-stock count sit right at the top — with a 7-day trend line so you can see if today is normal before you even open a bill.",
+      mockup: `
+        <div class="mini-stat-row">
+          <div class="mini-stat"><div class="n" style="color:#4ADE80">৳8,450</div><div class="l">Sales</div></div>
+          <div class="mini-stat"><div class="n">14</div><div class="l">Bills</div></div>
+          <div class="mini-stat"><div class="n" style="color:#FBBF24">3</div><div class="l">Low Stock</div></div>
+        </div>
+        <div class="mini-chart" style="color:#4ADE80">
+          <div style="height:35%"></div><div style="height:55%"></div><div style="height:40%"></div>
+          <div style="height:70%"></div><div style="height:50%"></div><div style="height:85%"></div><div style="height:60%"></div>
+        </div>`
+    },
+    {
+      key: 'billing', accent: '#4ADE80', icon: '▣',
+      title: 'Billing', eyebrow: 'Built for the counter, not a desk',
+      copy: "Type a code, hit Enter, next customer. Weighted items, discounts, and held bills all work without ever touching a mouse — fast enough for a queue.",
+      mockup: `
+        <div class="mini-search"></div>
+        <div class="mini-row"><span>Rice — 5kg bag</span><span class="amt">৳450</span></div>
+        <div class="mini-row"><span>Cooking Oil 1L</span><span class="amt">৳210</span></div>
+        <div class="mini-row"><span>Soap Bar <span class="mini-badge" style="background:rgba(74,222,128,0.2);color:#4ADE80">-10%</span></span><span class="amt">৳45</span></div>
+        <div class="mini-line" style="width:60%"></div>`
+    },
+    {
+      key: 'inventory', accent: '#8B5CF6', icon: '▤',
+      title: 'Inventory', eyebrow: 'Stock that updates itself',
+      copy: "Receive stock with a GRN, and it lands in inventory automatically — with cost tracked per batch, low-stock badges, and a printable receipt PDF.",
+      mockup: `
+        <div class="mini-filters">
+          <span class="on" style="background:#8B5CF6">GRN</span>
+          <span>Return</span><span>Damage</span>
+        </div>
+        <div class="mini-row"><span>Basmati Rice</span><span class="mini-badge" style="background:rgba(251,191,36,0.2);color:#FBBF24">LOW</span></div>
+        <div class="mini-row"><span>Detergent Powder</span><span class="amt">142 pcs</span></div>
+        <div class="mini-row"><span>Instant Noodles</span><span class="mini-badge" style="background:rgba(220,38,38,0.2);color:#FCA5A5">OUT</span></div>`
+    },
+    {
+      key: 'bills', accent: '#2DD4BF', icon: '🧾',
+      title: 'Bills', eyebrow: 'A paper trail without the paper',
+      copy: "Every completed sale — amount, payment method, timestamp — saved the moment it's charged. No end-of-day reconciling from memory.",
+      mockup: `
+        <div class="mini-row"><span>#A93F21</span><span class="amt" style="color:#2DD4BF">৳1,240</span></div>
+        <div class="mini-row"><span>#A93F1F</span><span class="amt" style="color:#2DD4BF">৳680</span></div>
+        <div class="mini-row"><span>#A93F1C</span><span class="amt" style="color:#2DD4BF">৳3,120</span></div>
+        <div class="mini-row"><span>#A93F19</span><span class="amt" style="color:#2DD4BF">৳215</span></div>`
+    },
+    {
+      key: 'analytics', accent: '#FBBF24', icon: '📊',
+      title: 'Analytics', eyebrow: 'Which products earn their shelf space',
+      copy: "Total revenue and a ranked best-sellers list, built from actual invoice lines — so restocking decisions come from data, not guesswork.",
+      mockup: `
+        <div class="mini-stat-row">
+          <div class="mini-stat" style="flex:1"><div class="n" style="color:#FBBF24">৳62,300</div><div class="l">Total Revenue</div></div>
+        </div>
+        <div class="mini-row"><span>1. Rice (5kg)</span><span class="amt">৳9,200</span></div>
+        <div class="mini-row"><span>2. Cooking Oil</span><span class="amt">৳6,750</span></div>
+        <div class="mini-row"><span>3. Soap Bar</span><span class="amt">৳4,110</span></div>`
+    },
+    {
+      key: 'reports', accent: '#F472B6', icon: '📈',
+      title: 'Reports', eyebrow: 'Today, this week, this month',
+      copy: "Flip between three windows to see sales and collections shift — the same numbers your dashboard shows, but filtered for exactly the period you're asking about.",
+      mockup: `
+        <div class="mini-filters">
+          <span class="on" style="background:#F472B6;color:#04140A">Today</span>
+          <span>Week</span><span>Month</span>
+        </div>
+        <div class="mini-stat-row">
+          <div class="mini-stat"><div class="n">৳8,450</div><div class="l">Sales</div></div>
+          <div class="mini-stat"><div class="n" style="color:#F472B6">৳8,450</div><div class="l">Collected</div></div>
+        </div>
+        <div class="mini-line" style="width:40%"></div>`
+    }
+  ];
+
+  const carousel = document.getElementById('carousel');
+  const dotsWrap = document.getElementById('dots');
+
+  carousel.innerHTML = screens.map(s => `
+    <div class="slide" data-key="${s.key}">
+      <div class="tablet">
+        <div class="tablet-glow" style="background:${s.accent}"></div>
+        <div class="tablet-head">
+          <div class="tablet-icon" style="background:${s.accent}22; color:${s.accent}">${s.icon}</div>
+          <div class="tablet-title">${s.title}</div>
+        </div>
+        ${s.mockup}
+      </div>
+      <div class="explain">
+        <div class="eyebrow" style="color:${s.accent}">${s.eyebrow}</div>
+        <h3>${s.title}</h3>
+        <p>${s.copy}</p>
+      </div>
+    </div>
+  `).join('');
+
+  dotsWrap.innerHTML = screens.map((_, i) => `<div class="dot${i === 0 ? ' active' : ''}" data-i="${i}"></div>`).join('');
+
+  const slides = Array.from(carousel.querySelectorAll('.slide'));
+  const dots = Array.from(dotsWrap.querySelectorAll('.dot'));
+  let activeIndex = 0;
+
+  function setActive(i){
+    activeIndex = Math.max(0, Math.min(screens.length - 1, i));
+    dots.forEach((d, idx) => d.classList.toggle('active', idx === activeIndex));
+  }
+
+  function scrollToSlide(i){
+    const target = slides[Math.max(0, Math.min(screens.length - 1, i))];
+    target.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }
+
+  document.getElementById('prevBtn').addEventListener('click', () => { setActive(activeIndex - 1); scrollToSlide(activeIndex); });
+  document.getElementById('nextBtn').addEventListener('click', () => { setActive(activeIndex + 1); scrollToSlide(activeIndex); });
+  dots.forEach(d => d.addEventListener('click', () => { setActive(parseInt(d.dataset.i, 10)); scrollToSlide(activeIndex); }));
+
+  // Sync dots to manual swipe/scroll
+  let scrollTimeout;
+  carousel.addEventListener('scroll', () => {
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+      const center = carousel.scrollLeft + carousel.clientWidth / 2;
+      let closest = 0, closestDist = Infinity;
+      slides.forEach((s, i) => {
+        const dist = Math.abs((s.offsetLeft + s.clientWidth / 2) - center);
+        if (dist < closestDist) { closestDist = dist; closest = i; }
+      });
+      setActive(closest);
+    }, 80);
+  });
+
+  // ---------- CTA: reveal form, submit lead (view-only page — no login) ----------
+  document.getElementById('showFormBtn').addEventListener('click', () => {
+    document.getElementById('cta-default').style.display = 'none';
+    document.getElementById('cta-form').classList.add('open');
+  });
+
+  document.getElementById('cta-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('lead-submit-btn');
+    const msg = document.getElementById('cta-msg');
+    btn.disabled = true; btn.textContent = 'Sending...';
+
+    const full_name = document.getElementById('lead-name').value;
+    const phone = document.getElementById('lead-phone').value;
+    const email = document.getElementById('lead-email').value;
+    const shop = document.getElementById('lead-shop').value;
+
+    const { error } = await sb.from('demo_leads').insert({
+      full_name: shop ? `${full_name} (${shop})` : full_name,
+      phone,
+      email
+    });
+
+    btn.disabled = false; btn.textContent = 'Send Request';
+
+    if (error) {
+      msg.textContent = 'Could not send your request right now — please try again.';
+      msg.className = 'cta-msg error';
+      return;
+    }
+
+    document.getElementById('cta-form').innerHTML = `
+      <div style="text-align:center; padding:10px 0;">
+        <div style="font-size:32px; margin-bottom:10px;">✅</div>
+        <h3 style="margin:0 0 6px;">Request received</h3>
+        <p style="color:#9FB0C3; font-size:13px; margin:0;">We'll reach out shortly to get your shop set up on BillOS.</p>
+      </div>`;
+  });
+</script>
 
 </body>
 </html>

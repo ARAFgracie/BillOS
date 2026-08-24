@@ -206,26 +206,17 @@
 
   <!-- TRY DEMO CARD -->
   <div class="card hidden" id="signup-card">
-    <h2>Try BillOS free</h2>
-    <p class="sub">We'll set up a demo shop for you — <span class="badge">Owner</span> access, no password needed.</p>
-    <form id="signup-form">
-      <label for="signup-name">Full Name</label>
-      <input type="text" id="signup-name" placeholder="Your name" required>
-      <label for="signup-phone">Phone Number</label>
-      <input type="tel" id="signup-phone" placeholder="01XXXXXXXXX" required>
-      <label for="signup-email">Email</label>
-      <input type="email" id="signup-email" placeholder="you@shop.com" required>
-      <button type="submit" class="btn" id="signup-btn">Start Demo</button>
-    </form>
-    <div class="msg" id="signup-msg"></div>
+    <h2>See BillOS in action</h2>
+    <p class="sub">A guided visual tour of every screen — no account, no shared login, nothing to sign up for yet.</p>
     <div class="guide-box" id="guide-box">
-      <div class="guide-title">What you'll get</div>
+      <div class="guide-title">What you'll see</div>
       <ul class="guide-list">
-        <li>A shared demo shop with sample products already loaded</li>
-        <li>Full access to Billing, Inventory, Bills, Analytics &amp; Reports</li>
-        <li>Just for exploring — changes may be reset for the next person trying it</li>
+        <li>Swipe through Dashboard, Billing, Inventory, Bills, Analytics &amp; Reports</li>
+        <li>A short explanation of what each screen actually does</li>
+        <li>A "Request Setup" form at the end when you're ready for your own shop</li>
       </ul>
     </div>
+    <a href="demo.html" class="btn" style="display:block; text-align:center; text-decoration:none; margin-top:16px;">View Live Preview →</a>
   </div>
 
   <div class="role-note">Only Owners and Authority can add Sales Executive accounts after login.</div>
@@ -289,41 +280,9 @@
     showMsg(msg, 'Logged in! Redirecting...', 'success');
     setTimeout(() => { window.location.href = 'dashboard.html'; }, 700);
   });
-
-  // ---- Try Demo: capture lead, then sign in to the shared demo account ----
-  const DEMO_EMAIL = 'demo@billos.app';
-  const DEMO_PASSWORD = 'BillOSDemo2026';
-
-  document.getElementById('signup-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = document.getElementById('signup-btn');
-    const msg = document.getElementById('signup-msg');
-    btn.disabled = true; btn.textContent = 'Starting demo...';
-
-    const fullName = document.getElementById('signup-name').value;
-    const phone = document.getElementById('signup-phone').value;
-    const email = document.getElementById('signup-email').value;
-
-    // 1. Save the lead (best-effort — don't block the demo if this fails)
-    await sb.from('demo_leads').insert({ full_name: fullName, phone, email });
-
-    // 2. Sign in to the single shared demo account
-    const { error: loginError } = await sb.auth.signInWithPassword({
-      email: DEMO_EMAIL,
-      password: DEMO_PASSWORD
-    });
-
-    btn.disabled = false; btn.textContent = 'Start Demo';
-
-    if (loginError) {
-      showMsg(msg, 'Could not start the demo right now. Please try again shortly.', 'error');
-      return;
-    }
-
-    showMsg(msg, 'Demo ready! Redirecting...', 'success');
-    setTimeout(() => { window.location.href = 'demo.html'; }, 600);
-  });
 </script>
+
+
 
 </body>
 </html>
