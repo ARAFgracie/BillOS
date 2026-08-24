@@ -1,22 +1,65 @@
 /* ============================================================
-   BillOS — Shared Desktop Layout
-   Injects a left sidebar on wide screens (>=1024px) without
-   requiring any per-page HTML restructuring. The sidebar itself
-   is injected by layout.js; this file only styles it and shifts
-   existing page content to make room for it.
+   BillOS — Shared Desktop Nav Drawer
+   Injects a slide-in ("off-canvas") sidebar on wide screens
+   (>=1024px). It does NOT push page content or resize anything —
+   it floats above the page as an overlay with a backdrop, opened
+   via a fixed ⋮ button and closed by tapping the same button,
+   the backdrop, or the close arrow inside the drawer.
+
+   This intentionally avoids the earlier "push content with
+   margin-left" approach: every page has its own inline
+   body{margin:0}, which kept fighting that shift and caused the
+   sidebar to visually overlap page content. An overlay drawer
+   sidesteps that entirely — nothing about the page layout has to
+   change for the drawer to work.
 
    Mobile/tablet (<1024px): untouched, existing bottom-nav layout.
-   Desktop (>=1024px): fixed left sidebar replaces bottom-nav.
-   Sidebar is collapsible: slides in/out with transform, state
-   persisted in localStorage (billos-sidebar-state).
+   Desktop (>=1024px): bottom-nav hidden, drawer used instead.
    ============================================================ */
 
 .app-sidebar{ display:none; }
 .app-sidebar-toggle{ display:none; }
+.app-sidebar-backdrop{ display:none; }
 
 @media (min-width: 1024px){
 
-  /* ---------- Sidebar shell ---------- */
+  /* ---------- Trigger button (always visible, opens/closes) ---------- */
+  .app-sidebar-toggle{
+    display:flex;
+    position:fixed;
+    top:18px; left:16px;
+    width:38px; height:38px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:var(--card);
+    color:var(--ink);
+    font-size:18px;
+    font-weight:700;
+    cursor:pointer;
+    z-index:110;
+    align-items:center;
+    justify-content:center;
+    box-shadow:0 2px 12px rgba(0,0,0,0.14);
+    transition:background 0.15s ease;
+  }
+  .app-sidebar-toggle:hover{ background:rgba(127,127,127,0.12); }
+
+  /* ---------- Backdrop (click to close) ---------- */
+  .app-sidebar-backdrop{
+    display:block;
+    position:fixed; inset:0;
+    background:rgba(0,0,0,0.4);
+    z-index:99;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 0.2s ease;
+  }
+  .app-sidebar-backdrop.open{
+    opacity:1;
+    pointer-events:auto;
+  }
+
+  /* ---------- Sidebar shell (off-canvas, overlay only) ---------- */
   .app-sidebar{
     display:flex;
     flex-direction:column;
@@ -25,19 +68,16 @@
     width:230px;
     padding:20px 14px;
     z-index:100;
-    border-radius:0;
-    border-top:none;
-    border-bottom:none;
-    border-left:none;
     background:var(--card);
     border-right:1px solid var(--border);
-    box-shadow:4px 0 28px rgba(0,0,0,0.08);
-    transform:translateX(0);
+    box-shadow:8px 0 32px rgba(0,0,0,0.22);
+    transform:translateX(-100%);
     transition:transform 0.25s ease;
   }
-  .app-sidebar.collapsed{
-    transform:translateX(-100%);
+  .app-sidebar.open{
+    transform:translateX(0);
   }
+
   .app-sidebar-brand{ display:flex; align-items:center; gap:10px; padding:0 6px 24px; }
   .app-sidebar-logo{
     width:36px; height:36px;
@@ -75,57 +115,6 @@
   }
   .app-sidebar-logout:hover{ background:rgba(220,38,38,0.08); }
 
-  /* ---------- Toggle button (visible only when sidebar collapsed) ---------- */
-  .app-sidebar-toggle{
-    display:none;
-    position:fixed;
-    top:20px; left:12px;
-    width:36px; height:36px;
-    border-radius:10px;
-    border:1px solid var(--border);
-    background:var(--card);
-    color:var(--ink);
-    font-size:18px;
-    font-weight:700;
-    cursor:pointer;
-    z-index:101;
-    align-items:center;
-    justify-content:center;
-    box-shadow:0 2px 12px rgba(0,0,0,0.12);
-    transition:opacity 0.2s ease, background 0.15s ease;
-  }
-  .app-sidebar-toggle:hover{ background:rgba(127,127,127,0.12); }
-  body.sidebar-collapsed .app-sidebar-toggle{
-    display:flex;
-  }
-
-  /* ---------- Shift existing page content to make room ----------
-     NOTE: uses "html body" (not just "body") on purpose. Every page
-     has its own inline <style> with body{ margin:0 } that loads
-     AFTER this file, and at equal specificity source order wins —
-     silently cancelling this shift and causing the sidebar to
-     overlap page content. The extra "html" bumps specificity so
-     this rule always wins regardless of per-page CSS. */
-  html body{
-    margin-left:230px;
-    transition:margin-left 0.25s ease;
-  }
-  html body.sidebar-collapsed{
-    margin-left:0;
-  }
-  html .cart-bar{
-    left:230px;
-    transition:left 0.25s ease;
-  }
-  html body.sidebar-collapsed .cart-bar{
-    left:0;
-  }
-
-  /* Hide each page's own inline logo/wordmark on desktop — the
-     sidebar already shows the BillOS brand, so the topbar's copy
-     was rendering on top of it (the duplicate text in screenshots). */
-  html .topbar .brand{ display:none; }
-
-  /* Mobile bottom navigation is replaced by the sidebar on desktop */
+  /* Mobile bottom navigation is replaced by the drawer on desktop */
   .bottom-nav{ display:none !important; }
 }
