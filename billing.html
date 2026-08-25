@@ -576,6 +576,42 @@
     if (new URLSearchParams(window.location.search).get('hold') === '1') {
       openHoldPanel();
     }
+
+    if (new URLSearchParams(window.location.search).get('resume') === '1') {
+      resumeFromBillsPage();
+    }
+  }
+
+  // Called when arriving from bills.html with a saved cart (from a
+  // completed bill's "Edit This Bill" button). Loads its line items
+  // back into the current cart, matched by product id.
+  function resumeFromBillsPage() {
+    const raw = sessionStorage.getItem('billos-resume-cart');
+    sessionStorage.removeItem('billos-resume-cart');
+    if (!raw) return;
+
+    let items;
+    try { items = JSON.parse(raw); } catch (e) { return; }
+    if (!Array.isArray(items) || !items.length) return;
+
+    if (cartOrder.length > 0) {
+      if (!confirm('This will replace your current in-progress bill. Continue?')) return;
+    }
+
+    cart = {};
+    cartOrder = [];
+    let skipped = 0;
+
+    items.forEach(item => {
+      const product = products.find(p => p.id === item.productId);
+      if (!product) { skipped++; return; }
+      cart[product.id] = { product, qty: item.qty };
+      cartOrder.push(product.id);
+    });
+
+    renderCart();
+    showToast(skipped > 0 ? `Bill loaded (${skipped} item(s) no longer available)` : 'Bill loaded for editing');
+    focusSearch();
   }
 
   async function loadProducts() {
