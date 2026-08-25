@@ -142,7 +142,7 @@ html[data-theme="ash"] .search{
   display:none;
   flex-direction:column;
   gap:2px;
-  z-index:50;
+  z-index:200;
   box-shadow:0 16px 40px rgba(0,0,0,0.18);
 }
 .theme-menu.open{ display:flex; }

@@ -23,23 +23,25 @@
 
 @media (min-width: 1024px){
 
-  /* ---------- Trigger button (always visible, opens/closes) ---------- */
+  /* ---------- Trigger button ----------
+     Mounted INSIDE each page's own .topbar by layout.js (as a
+     normal flex item, not fixed-positioned), so it can never
+     float over and collide with that page's brand/back-link/
+     theme-toggle — it just takes its place in the same row. */
   .app-sidebar-toggle{
     display:flex;
-    position:fixed;
-    top:18px; left:16px;
-    width:38px; height:38px;
-    border-radius:10px;
+    align-items:center;
+    justify-content:center;
+    width:34px; height:34px;
+    border-radius:50%;
     border:1px solid var(--border);
     background:var(--card);
     color:var(--ink);
-    font-size:18px;
+    font-size:16px;
     font-weight:700;
     cursor:pointer;
-    z-index:110;
-    align-items:center;
-    justify-content:center;
-    box-shadow:0 2px 12px rgba(0,0,0,0.14);
+    flex-shrink:0;
+    box-shadow:0 1px 4px rgba(0,0,0,0.08);
     transition:background 0.15s ease;
   }
   .app-sidebar-toggle:hover{ background:rgba(127,127,127,0.12); }

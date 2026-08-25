@@ -24,9 +24,10 @@
     return path || "index.html";
   }
 
-  let sidebarEl, backdropEl, toggleEl;
+  let sidebarEl, backdropEl, toggleEl, closeTimer;
 
   function openDrawer() {
+    clearTimeout(closeTimer);
     sidebarEl.classList.add("open");
     backdropEl.classList.add("open");
   }
@@ -34,6 +35,15 @@
   function closeDrawer() {
     sidebarEl.classList.remove("open");
     backdropEl.classList.remove("open");
+  }
+
+  function scheduleClose() {
+    clearTimeout(closeTimer);
+    closeTimer = setTimeout(closeDrawer, 300);
+  }
+
+  function cancelScheduledClose() {
+    clearTimeout(closeTimer);
   }
 
   function toggleDrawer() {
@@ -46,13 +56,14 @@
 
     const currentPage = getCurrentPage();
 
-    // Fixed trigger button — always visible on desktop, opens/closes the drawer
+    // Trigger button — mounted inside the page's own .brand (next to
+    // the logo) so it's always a normal, correctly-spaced flex item
+    // and can never float over / hide the logo like a fixed button would.
     toggleEl = document.createElement("button");
     toggleEl.type = "button";
     toggleEl.className = "app-sidebar-toggle";
     toggleEl.setAttribute("aria-label", "Open navigation");
     toggleEl.innerHTML = "⋮";
-    toggleEl.addEventListener("click", toggleDrawer);
 
     // Backdrop — click anywhere outside the drawer to close it
     backdropEl = document.createElement("div");
@@ -89,7 +100,32 @@
 
     document.body.prepend(backdropEl);
     document.body.prepend(sidebarEl);
-    document.body.prepend(toggleEl);
+
+    // Mount the toggle inside .brand if present, otherwise fall back
+    // to the topbar, otherwise fall back to a fixed corner button.
+    const brand = document.querySelector(".topbar .brand") || document.querySelector(".brand");
+    const topbar = document.querySelector(".topbar");
+    if (brand) {
+      brand.insertBefore(toggleEl, brand.firstChild);
+    } else if (topbar) {
+      topbar.insertBefore(toggleEl, topbar.firstChild);
+    } else {
+      document.body.prepend(toggleEl);
+      toggleEl.style.position = "fixed";
+      toggleEl.style.top = "18px";
+      toggleEl.style.left = "16px";
+      toggleEl.style.zIndex = "110";
+    }
+
+    // Click still works (touch devices, accessibility)
+    toggleEl.addEventListener("click", toggleDrawer);
+
+    // Hover the toggle or the open drawer to keep it open; moving the
+    // mouse away from both auto-closes it after a short delay.
+    toggleEl.addEventListener("mouseenter", openDrawer);
+    toggleEl.addEventListener("mouseleave", scheduleClose);
+    sidebarEl.addEventListener("mouseenter", cancelScheduledClose);
+    sidebarEl.addEventListener("mouseleave", scheduleClose);
 
     const closeBtn = sidebarEl.querySelector("#sidebarCloseBtn");
     if (closeBtn) closeBtn.addEventListener("click", closeDrawer);
