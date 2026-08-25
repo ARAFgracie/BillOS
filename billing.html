@@ -1041,19 +1041,40 @@
   async function completeEditedBill(items, totalAmount, btn, msg) {
     const invoiceId = editingInvoiceId;
 
-    const { error: updateError } = await sb
+    const { data: updatedInvoice, error: updateError } = await sb
       .from('invoices')
       .update({ total_amount: totalAmount, payment_method: selectedPayment })
-      .eq('id', invoiceId);
+      .eq('id', invoiceId)
+      .select();
 
     if (updateError) {
       btn.disabled = false; btn.textContent = 'Confirm Payment';
       msg.textContent = 'Failed to update bill: ' + updateError.message;
       msg.className = 'msg error';
+      console.error('Bill update failed:', updateError);
       return;
     }
 
-    await sb.from('invoice_items').delete().eq('invoice_id', invoiceId);
+    // Supabase can return NO error but ALSO update zero rows if a
+    // Row-Level-Security policy silently blocks it (very common when
+    // a table only has an INSERT policy, not UPDATE). Catch that case
+    // explicitly instead of reporting false success.
+    if (!updatedInvoice || updatedInvoice.length === 0) {
+      btn.disabled = false; btn.textContent = 'Confirm Payment';
+      msg.textContent = 'Bill was not saved — your account may not have permission to edit past bills (check Supabase RLS policies on the "invoices" table for UPDATE).';
+      msg.className = 'msg error';
+      console.error('Invoice update affected 0 rows — likely blocked by RLS.', invoiceId);
+      return;
+    }
+
+    const { error: deleteError } = await sb.from('invoice_items').delete().eq('invoice_id', invoiceId);
+    if (deleteError) {
+      btn.disabled = false; btn.textContent = 'Confirm Payment';
+      msg.textContent = 'Bill total updated but old items could not be cleared: ' + deleteError.message;
+      msg.className = 'msg error';
+      console.error('invoice_items delete failed:', deleteError);
+      return;
+    }
 
     const invoiceItems = items.map(i => ({
       invoice_id: invoiceId,
@@ -1068,6 +1089,7 @@
       btn.disabled = false; btn.textContent = 'Confirm Payment';
       msg.textContent = 'Bill updated but items failed: ' + itemsError.message;
       msg.className = 'msg error';
+      console.error('invoice_items insert failed:', itemsError);
       return;
     }
 
