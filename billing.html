@@ -508,6 +508,8 @@
   let products = [];
   let cart = {};       // productId -> { product, qty }
   let cartOrder = [];  // ordered list of productIds, most recent last
+  let editingInvoiceId = null;   // set when editing a past bill instead of starting a new one
+  let editingOriginalItems = []; // that bill's original {productId, qty} lines, for stock-delta math
   let selectedPayment = 'cash';
   let lastF1Time = 0;
   let heldBills = [];  // held_bills rows for this shop
@@ -584,15 +586,18 @@
 
   // Called when arriving from bills.html with a saved cart (from a
   // completed bill's "Edit This Bill" button). Loads its line items
-  // back into the current cart, matched by product id.
+  // back into the current cart, matched by product id, and puts
+  // billing.html into "edit mode" so Confirm Payment UPDATES that
+  // same invoice instead of creating a brand new one (which was
+  // silently double-counting sales and double-deducting stock).
   function resumeFromBillsPage() {
     const raw = sessionStorage.getItem('billos-resume-cart');
     sessionStorage.removeItem('billos-resume-cart');
     if (!raw) return;
 
-    let items;
-    try { items = JSON.parse(raw); } catch (e) { return; }
-    if (!Array.isArray(items) || !items.length) return;
+    let payload;
+    try { payload = JSON.parse(raw); } catch (e) { return; }
+    if (!payload || !Array.isArray(payload.items) || !payload.items.length) return;
 
     if (cartOrder.length > 0) {
       if (!confirm('This will replace your current in-progress bill. Continue?')) return;
@@ -602,16 +607,47 @@
     cartOrder = [];
     let skipped = 0;
 
-    items.forEach(item => {
+    payload.items.forEach(item => {
       const product = products.find(p => p.id === item.productId);
       if (!product) { skipped++; return; }
       cart[product.id] = { product, qty: item.qty };
       cartOrder.push(product.id);
     });
 
+    editingInvoiceId = payload.invoiceId || null;
+    editingOriginalItems = payload.items;
+    renderEditBanner();
+
     renderCart();
     showToast(skipped > 0 ? `Bill loaded (${skipped} item(s) no longer available)` : 'Bill loaded for editing');
     focusSearch();
+  }
+
+  function renderEditBanner() {
+    let banner = document.getElementById('edit-mode-banner');
+    if (!editingInvoiceId) {
+      if (banner) banner.remove();
+      return;
+    }
+    const code = editingInvoiceId.slice(0, 8).toUpperCase();
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = 'edit-mode-banner';
+      banner.style.cssText = 'padding:10px 14px;border-radius:12px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);color:var(--blue);font-size:12.5px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;';
+      const h1 = document.querySelector('.content h1');
+      if (h1) h1.insertAdjacentElement('afterend', banner);
+    }
+    banner.innerHTML = `<span>✎ Editing Bill #${code} — Charging will update this bill, not create a new one.</span>
+      <a href="#" id="cancel-edit-link" style="color:inherit; text-decoration:underline; flex-shrink:0;">Cancel</a>`;
+    document.getElementById('cancel-edit-link').addEventListener('click', (e) => {
+      e.preventDefault();
+      editingInvoiceId = null;
+      editingOriginalItems = [];
+      cart = {};
+      cartOrder = [];
+      renderEditBanner();
+      renderCart();
+    });
   }
 
   async function loadProducts() {
@@ -992,6 +1028,88 @@
     const items = cartOrder.map(id => cart[id]).filter(Boolean);
     const totalAmount = items.reduce((sum, i) => sum + i.qty * getUnitPrice(i.product), 0);
 
+    if (editingInvoiceId) {
+      await completeEditedBill(items, totalAmount, btn, msg);
+    } else {
+      await completeNewBill(items, totalAmount, btn, msg);
+    }
+  });
+
+  // ---- Editing an existing bill: update it in place, adjust stock
+  // by the DIFFERENCE only (not the full new quantity), so sales
+  // totals and stock don't get double-counted. ----
+  async function completeEditedBill(items, totalAmount, btn, msg) {
+    const invoiceId = editingInvoiceId;
+
+    const { error: updateError } = await sb
+      .from('invoices')
+      .update({ total_amount: totalAmount, payment_method: selectedPayment })
+      .eq('id', invoiceId);
+
+    if (updateError) {
+      btn.disabled = false; btn.textContent = 'Confirm Payment';
+      msg.textContent = 'Failed to update bill: ' + updateError.message;
+      msg.className = 'msg error';
+      return;
+    }
+
+    await sb.from('invoice_items').delete().eq('invoice_id', invoiceId);
+
+    const invoiceItems = items.map(i => ({
+      invoice_id: invoiceId,
+      product_id: i.product.id,
+      quantity: i.qty,
+      unit_price: getUnitPrice(i.product),
+      line_total: i.qty * getUnitPrice(i.product)
+    }));
+
+    const { error: itemsError } = await sb.from('invoice_items').insert(invoiceItems);
+    if (itemsError) {
+      btn.disabled = false; btn.textContent = 'Confirm Payment';
+      msg.textContent = 'Bill updated but items failed: ' + itemsError.message;
+      msg.className = 'msg error';
+      return;
+    }
+
+    // Stock delta: only move stock by (new qty - original qty) per
+    // product, so re-charging the same bill doesn't touch stock at
+    // all, and only genuine changes affect it.
+    const origMap = {};
+    editingOriginalItems.forEach(i => { origMap[i.productId] = (origMap[i.productId] || 0) + i.qty; });
+    const newMap = {};
+    items.forEach(i => { newMap[i.product.id] = (newMap[i.product.id] || 0) + i.qty; });
+
+    const allProductIds = new Set([...Object.keys(origMap), ...Object.keys(newMap)]);
+    for (const pid of allProductIds) {
+      const delta = (newMap[pid] || 0) - (origMap[pid] || 0);
+      if (delta === 0) continue;
+      const prod = products.find(p => p.id === pid);
+      if (prod) {
+        await sb.from('products').update({ stock_quantity: prod.stock_quantity - delta }).eq('id', pid);
+      }
+    }
+
+    msg.textContent = 'Bill updated successfully!';
+    msg.className = 'msg success';
+    btn.textContent = 'Confirm Payment';
+
+    setTimeout(() => {
+      cart = {};
+      cartOrder = [];
+      editingInvoiceId = null;
+      editingOriginalItems = [];
+      renderEditBanner();
+      renderCart();
+      document.getElementById('modal-overlay').classList.remove('open');
+      msg.className = 'msg';
+      btn.disabled = false;
+      loadProducts();
+      focusSearch();
+    }, 1200);
+  }
+
+  // ---- Normal checkout: create a brand new invoice ----
+  async function completeNewBill(items, totalAmount, btn, msg) {
     const { data: invoice, error: invError } = await sb
       .from('invoices')
       .insert({
@@ -1047,7 +1165,7 @@
       loadProducts();
       focusSearch();
     }, 1200);
-  });
+  }
 
   // ============================================================
   // F6 — Quick Hold with two-step confirm dialog

@@ -316,10 +316,10 @@
       </div>
     `;
 
-    document.getElementById('edit-bill-btn').addEventListener('click', () => editThisBill(items));
+    document.getElementById('edit-bill-btn').addEventListener('click', () => editThisBill(bill, items));
   }
 
-  function editThisBill(items) {
+  function editThisBill(bill, items) {
     const msg = document.getElementById('lookup-msg');
     const cartData = items.filter(i => i.productId).map(i => ({ productId: i.productId, qty: i.qty }));
 
@@ -329,7 +329,7 @@
       return;
     }
 
-    sessionStorage.setItem('billos-resume-cart', JSON.stringify(cartData));
+    sessionStorage.setItem('billos-resume-cart', JSON.stringify({ invoiceId: bill.id, items: cartData }));
     window.location.href = 'billing.html?resume=1';
   }
 
