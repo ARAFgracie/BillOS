@@ -68,6 +68,8 @@
     padding:12px 14px; margin-bottom:8px;
   }
   .item-row.just-added{ border-color:var(--blue); box-shadow:0 0 0 3px rgba(34,197,94,0.15); }
+  .item-row{ cursor:pointer; }
+  .item-row.row-selected{ border-color:var(--blue); background:rgba(34,197,94,0.05); }
   .i-name{ font-weight:700; font-size:14px; }
   .i-meta{ font-size:11.5px; color:var(--muted); margin-top:2px; }
   .i-right{ display:flex; align-items:center; gap:10px; }
@@ -302,13 +304,14 @@
   /* ---------- Product search overlay (empty-Enter) ---------- */
   .prodsearch-overlay{
     position:fixed; inset:0; background:rgba(0,0,0,0.4); backdrop-filter:blur(4px);
-    display:none; align-items:flex-end; justify-content:center; z-index:35;
+    display:none; align-items:center; justify-content:center; z-index:35;
+    padding:20px;
   }
   .prodsearch-overlay.open{ display:flex; }
   .prodsearch-panel{
     background:var(--card); border:1px solid var(--border);
-    border-radius:24px 24px 0 0; padding:18px 16px 20px;
-    width:100%; max-width:600px; height:70vh; max-height:70vh;
+    border-radius:22px; padding:18px 16px 20px;
+    width:100%; max-width:600px; max-height:min(560px, 78vh);
     display:flex; flex-direction:column;
   }
   .prodsearch-header{
@@ -409,9 +412,48 @@
       <div class="pay-opt selected" data-method="cash">Cash</div>
       <div class="pay-opt" data-method="card">Card</div>
     </div>
+    <div id="cash-fields">
+      <label style="display:block; font-size:11px; font-weight:700; color:var(--muted); margin-bottom:5px; text-transform:uppercase;">Cash Received</label>
+      <input type="number" id="cash-received-input" placeholder="৳ amount given by customer" step="0.01" min="0"
+        style="width:100%; padding:12px 14px; margin-bottom:10px; border-radius:12px; border:1.5px solid var(--border); font-size:16px; outline:none;">
+      <div id="change-due-row" style="display:flex; justify-content:space-between; align-items:center; padding:10px 2px; margin-bottom:14px; font-size:14px; font-weight:700;">
+        <span style="color:var(--muted); font-weight:600;">Change Due</span>
+        <span id="change-due-amount">৳0.00</span>
+      </div>
+    </div>
     <button class="confirm-btn" id="confirm-btn">Confirm Payment</button>
     <div class="msg" id="charge-msg"></div>
     <a href="#" class="cancel-link" id="cancel-link">Cancel</a>
+  </div>
+</div>
+
+<!-- Password confirm modal — required to delete a listed item -->
+<div class="modal-overlay" id="remove-pass-overlay">
+  <div class="modal">
+    <h3>Confirm Deletion</h3>
+    <p style="font-size:13px; color:var(--muted); margin:-10px 0 16px;">
+      Removing "<span id="remove-pass-item-name"></span>" from this bill needs your account password.
+    </p>
+    <form id="remove-pass-form">
+      <label style="display:block; font-size:11px; font-weight:700; color:var(--muted); margin-bottom:5px; text-transform:uppercase;">Password</label>
+      <input type="password" id="remove-pass-input" placeholder="••••••••" autocomplete="off"
+        style="width:100%; padding:12px 14px; margin-bottom:14px; border-radius:12px; border:1.5px solid var(--border); font-size:16px; outline:none;">
+      <button type="submit" class="confirm-btn" id="remove-pass-confirm" style="width:100%; background:var(--error, #DC2626);">Confirm &amp; Delete</button>
+      <div class="msg" id="remove-pass-msg"></div>
+      <a href="#" class="cancel-link" id="remove-pass-cancel">Cancel</a>
+    </form>
+  </div>
+</div>
+
+<!-- Logout confirm — offered only when a bill is in progress on this page -->
+<div class="modal-overlay" id="logout-hold-overlay">
+  <div class="modal">
+    <h3>Close Billing?</h3>
+    <p style="font-size:14px; color:var(--ink); margin:-6px 0 20px; line-height:1.5;">
+      Are you sure you want to close? This bill's items will be held for later so nothing is lost.
+    </p>
+    <button type="button" class="confirm-btn" id="logout-hold-ok-btn" style="width:100%;">OK</button>
+    <a href="#" class="cancel-link" id="logout-hold-cancel-btn">Cancel</a>
   </div>
 </div>
 
@@ -435,27 +477,6 @@
       </div>
 
       <div id="held-bills-list"></div>
-    </div>
-  </div>
-</div>
-
-<!-- F6: Hold confirm dialog -->
-<div class="confirm-dialog-overlay" id="f6-confirm-overlay">
-  <div class="confirm-dialog" role="dialog" aria-modal="true">
-    <p>Do you want to hold the bill?</p>
-    <div class="confirm-dialog-btns">
-      <button type="button" class="confirm-dialog-btn" id="f6-yes-btn" data-choice="yes">Yes</button>
-      <button type="button" class="confirm-dialog-btn focused" id="f6-no-btn" data-choice="no">No</button>
-    </div>
-  </div>
-</div>
-
-<!-- F6: Hold success dialog -->
-<div class="confirm-dialog-overlay" id="f6-success-overlay">
-  <div class="confirm-dialog" role="dialog" aria-modal="true">
-    <p>This bill is successfully moved to hold</p>
-    <div class="confirm-dialog-btns">
-      <button type="button" class="confirm-dialog-btn primary focused" id="f6-ok-btn">Yes</button>
     </div>
   </div>
 </div>
@@ -489,7 +510,7 @@
 <div class="prodsearch-overlay" id="prodsearch-overlay">
   <div class="prodsearch-panel">
     <div class="prodsearch-header">
-      <h3>Search Products</h3>
+      <h3 id="prodsearch-title">Search Products</h3>
       <button type="button" class="prodsearch-close" id="prodsearch-close-btn">✕</button>
     </div>
     <input type="text" class="prodsearch-input" id="prodsearch-input" placeholder="Type name or code..." autocomplete="off">
@@ -505,18 +526,24 @@
   window.sb = sb;
 
   let profile = null;
+  let userEmail = null;   // for password re-check before deleting a cart item
   let products = [];
   let cart = {};       // productId -> { product, qty }
   let cartOrder = [];  // ordered list of productIds, most recent last
   let editingInvoiceId = null;   // set when editing a past bill instead of starting a new one
   let editingOriginalItems = []; // that bill's original {productId, qty} lines, for stock-delta math
   let selectedPayment = 'cash';
-  let lastF1Time = 0;
+  let lastF2Time = 0;
+  let f2PressCount = 0;
+  let f2SingleTimer = null;
+  let selectedCartId = null;  // product row selected by mouse click, for F2 double-press qty edit
+  let pendingRemoveId = null; // cart item awaiting password confirmation to delete
   let heldBills = [];  // held_bills rows for this shop
   let discounts = [];  // active/scheduled discounts for this shop
-  let f6FocusChoice = 'no';  // 'yes' | 'no'
   let prodsearchHighlight = 0;
   let prodsearchFiltered = [];
+  let prodsearchMode = 'normal'; // 'normal' | 'outofstock'
+  const DRAFT_CART_KEY_PREFIX = 'billos-draft-cart-';
 
   async function loadDiscounts() {
     const { data } = await sb
@@ -566,6 +593,7 @@
       return;
     }
     profile = p;
+    userEmail = session.user.email || null;
 
     await loadProducts();
     await loadHeldBills();
@@ -575,12 +603,59 @@
     document.getElementById('app').style.display = 'block';
     focusSearch();
 
-    if (new URLSearchParams(window.location.search).get('hold') === '1') {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('hold') === '1') {
       openHoldPanel();
-    }
-
-    if (new URLSearchParams(window.location.search).get('resume') === '1') {
+    } else if (params.get('resume') === '1') {
       resumeFromBillsPage();
+    } else {
+      restoreDraftCart();
+    }
+  }
+
+  // ---------- Draft cart persistence ----------
+  // Keeps the in-progress bill saved locally per-user so it survives
+  // navigating to another page, refreshing, or even logging out
+  // without charging or explicitly holding it.
+  function draftCartKey() {
+    return profile ? DRAFT_CART_KEY_PREFIX + profile.id : null;
+  }
+
+  function saveDraftCart() {
+    const key = draftCartKey();
+    if (!key) return;
+    if (!cartOrder.length) {
+      localStorage.removeItem(key);
+      return;
+    }
+    const items = cartOrder.map(id => ({ productId: id, qty: cart[id].qty }));
+    localStorage.setItem(key, JSON.stringify({ items, savedAt: Date.now() }));
+  }
+
+  function clearDraftCart() {
+    const key = draftCartKey();
+    if (key) localStorage.removeItem(key);
+  }
+
+  function restoreDraftCart() {
+    const key = draftCartKey();
+    if (!key) return;
+    const raw = localStorage.getItem(key);
+    if (!raw) return;
+    let payload;
+    try { payload = JSON.parse(raw); } catch (e) { return; }
+    if (!payload || !Array.isArray(payload.items) || !payload.items.length) return;
+
+    let skipped = 0;
+    payload.items.forEach(item => {
+      const product = products.find(p2 => p2.id === item.productId);
+      if (!product) { skipped++; return; }
+      cart[product.id] = { product, qty: item.qty };
+      cartOrder.push(product.id);
+    });
+    renderCart();
+    if (cartOrder.length) {
+      showToast(skipped > 0 ? `Previous bill restored (${skipped} item(s) unavailable)` : 'Previous bill restored');
     }
   }
 
@@ -715,23 +790,31 @@
     input.focus();
   });
 
-  // ---------- F1 double-press to edit last item's quantity ----------
+  // ---------- F2: double-press edits qty (selected row, or last-added
+  // if none selected); single-press opens the out-of-stock lookup ----------
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'F1') {
-      e.preventDefault();
-      const now = Date.now();
-      if (now - lastF1Time < 500) {
-        const lastId = cartOrder[cartOrder.length - 1];
-        if (lastId) {
-          const qtyInput = document.getElementById('qty-' + lastId);
-          if (qtyInput) {
-            qtyInput.focus();
-            qtyInput.select();
-          }
+    if (e.key !== 'F2') return;
+    e.preventDefault();
+    f2PressCount++;
+
+    if (f2PressCount === 1) {
+      clearTimeout(f2SingleTimer);
+      f2SingleTimer = setTimeout(() => {
+        if (f2PressCount === 1) {
+          openOutOfStockSearch();
         }
-        lastF1Time = 0;
-      } else {
-        lastF1Time = now;
+        f2PressCount = 0;
+      }, 350);
+    } else {
+      clearTimeout(f2SingleTimer);
+      f2PressCount = 0;
+      const targetId = selectedCartId || cartOrder[cartOrder.length - 1];
+      if (targetId) {
+        const qtyInput = document.getElementById('qty-' + targetId);
+        if (qtyInput) {
+          qtyInput.focus();
+          qtyInput.select();
+        }
       }
     }
   });
@@ -745,6 +828,7 @@
       headWrap.innerHTML = '';
       container.innerHTML = '<div class="empty-card">No items yet. Type a product code and press Enter to start the bill.</div>';
       updateCartBar();
+      saveDraftCart();
       return;
     }
 
@@ -758,27 +842,37 @@
       const unitPrice = getUnitPrice(p);
       const lineTotal = (entry.qty * unitPrice).toFixed(2);
       const justAdded = id === justAddedId ? ' just-added' : '';
+      const selected = id === selectedCartId ? ' row-selected' : '';
       const priceMeta = discount
         ? `#${p.code || '—'} · <span style="text-decoration:line-through;opacity:0.6;">৳${p.price}</span> ৳${unitPrice.toFixed(2)}/${p.unit} <span class="discount-tag">🏷️ ${discount.name}</span>`
         : `#${p.code || '—'} · ৳${p.price}/${p.unit}`;
       return `
-        <div class="item-row${justAdded}">
+        <div class="item-row${justAdded}${selected}" onclick="selectCartRow(event, '${id}')">
           <div>
             <div class="i-name">${p.name}</div>
             <div class="i-meta">${priceMeta}</div>
           </div>
           <div class="i-right">
             <input type="number" min="0" step="${p.is_weighted ? '0.01' : '1'}" class="qty-input" id="qty-${id}" value="${entry.qty}"
-              onkeydown="handleQtyKeydown(event, '${id}')" onchange="updateQty('${id}', this.value)">
+              onkeydown="handleQtyKeydown(event, '${id}')" onchange="updateQty('${id}', this.value)" onclick="event.stopPropagation();">
             <div class="i-total">৳${lineTotal}</div>
-            <button class="remove-btn" onclick="removeItem('${id}')">✕</button>
+            <button class="remove-btn" onclick="event.stopPropagation(); requestRemoveItem('${id}')">✕</button>
           </div>
         </div>
       `;
     }).join('');
 
     updateCartBar();
+    saveDraftCart();
   }
+
+  // Clicking anywhere on a cart row (not the qty box or remove button)
+  // selects it, so F2 double-press edits THAT item's qty instead of
+  // only ever the most-recently-added one.
+  window.selectCartRow = function(e, id) {
+    selectedCartId = (selectedCartId === id) ? null : id;
+    renderCart();
+  };
 
   window.handleQtyKeydown = function(e, id) {
     if (e.key === 'Enter') {
@@ -788,23 +882,78 @@
     }
   };
 
+  // Deleting a listed item now requires the account password — opens
+  // a confirm modal instead of removing immediately (prevents a
+  // cashier quietly dropping items off a bill after scanning).
+  window.requestRemoveItem = function(id) {
+    if (!cart[id]) return;
+    pendingRemoveId = id;
+    const p = cart[id].product;
+    document.getElementById('remove-pass-item-name').textContent = p.name;
+    document.getElementById('remove-pass-input').value = '';
+    document.getElementById('remove-pass-msg').className = 'msg';
+    document.getElementById('remove-pass-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('remove-pass-input').focus(), 50);
+  };
+
+  function closeRemovePassModal() {
+    pendingRemoveId = null;
+    document.getElementById('remove-pass-overlay').classList.remove('open');
+    focusSearch();
+  }
+
+  document.getElementById('remove-pass-cancel').addEventListener('click', (e) => {
+    e.preventDefault();
+    closeRemovePassModal();
+  });
+
+  document.getElementById('remove-pass-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!pendingRemoveId) return;
+    const btn = document.getElementById('remove-pass-confirm');
+    const msg = document.getElementById('remove-pass-msg');
+    const password = document.getElementById('remove-pass-input').value;
+
+    if (!userEmail || !password) {
+      msg.textContent = 'Enter your account password.';
+      msg.className = 'msg error';
+      return;
+    }
+
+    btn.disabled = true; btn.textContent = 'Checking...';
+
+    const { error } = await sb.auth.signInWithPassword({ email: userEmail, password });
+
+    btn.disabled = false; btn.textContent = 'Confirm & Delete';
+
+    if (error) {
+      msg.textContent = 'Wrong password.';
+      msg.className = 'msg error';
+      return;
+    }
+
+    const id = pendingRemoveId;
+    delete cart[id];
+    cartOrder = cartOrder.filter(x => x !== id);
+    if (selectedCartId === id) selectedCartId = null;
+    renderCart();
+    closeRemovePassModal();
+  });
+
   window.updateQty = function(id, value) {
     const entry = cart[id];
     if (!entry) return;
     let qty = parseFloat(value);
     if (!entry.product.is_weighted) qty = Math.round(qty);
     if (!qty || qty <= 0) {
-      delete cart[id];
-      cartOrder = cartOrder.filter(x => x !== id);
-    } else {
-      entry.qty = Math.round(qty * 100) / 100;
+      // Zeroing the qty box is also a deletion — route through the
+      // same password check rather than silently dropping the item.
+      const input = document.getElementById('qty-' + id);
+      if (input) input.value = entry.qty; // put the old value back for now
+      requestRemoveItem(id);
+      return;
     }
-    renderCart();
-  };
-
-  window.removeItem = function(id) {
-    delete cart[id];
-    cartOrder = cartOrder.filter(x => x !== id);
+    entry.qty = Math.round(qty * 100) / 100;
     renderCart();
   };
 
@@ -970,13 +1119,8 @@
     renderF7List();
   };
 
-  // Ctrl+H opens/closes the Hold panel
-  document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && (e.key === 'h' || e.key === 'H')) {
-      e.preventDefault();
-      holdOverlay.classList.contains('open') ? closeHoldPanel() : openHoldPanel();
-    }
-  });
+  // (Ctrl+H removed — hold access now lives on F6, see the global
+  // shortcuts block near the bottom of this script.)
 
   function updateCartBar() {
     const items = cartOrder.map(id => cart[id]).filter(Boolean);
@@ -989,6 +1133,24 @@
   }
 
   // ---------- Checkout (Charge button + Space) ----------
+  function updateChangeDue() {
+    const totalAmount = parseFloat(document.getElementById('modal-total').textContent.replace('৳', '')) || 0;
+    const received = parseFloat(document.getElementById('cash-received-input').value) || 0;
+    const change = received - totalAmount;
+    const el = document.getElementById('change-due-amount');
+    if (!document.getElementById('cash-received-input').value) {
+      el.textContent = '৳0.00';
+      el.style.color = '';
+    } else if (change < 0) {
+      el.textContent = '৳' + Math.abs(change).toFixed(2) + ' short';
+      el.style.color = 'var(--error, #DC2626)';
+    } else {
+      el.textContent = '৳' + change.toFixed(2);
+      el.style.color = 'var(--green)';
+    }
+    return change;
+  }
+
   function openPaymentModal(use65vh) {
     const items = cartOrder.map(id => cart[id]).filter(Boolean);
     if (!items.length) return;
@@ -1000,7 +1162,13 @@
     } else {
       modal.classList.remove('h65');
     }
+    document.getElementById('cash-received-input').value = '';
+    updateChangeDue();
+    document.getElementById('cash-fields').style.display = selectedPayment === 'cash' ? 'block' : 'none';
     document.getElementById('modal-overlay').classList.add('open');
+    if (selectedPayment === 'cash') {
+      setTimeout(() => document.getElementById('cash-received-input').focus(), 50);
+    }
   }
 
   document.getElementById('charge-btn').addEventListener('click', () => {
@@ -1012,11 +1180,20 @@
     focusSearch();
   });
 
+  document.getElementById('cash-received-input').addEventListener('input', updateChangeDue);
+  document.getElementById('cash-received-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.getElementById('confirm-btn').click();
+    }
+  });
+
   document.querySelectorAll('.pay-opt').forEach(opt => {
     opt.addEventListener('click', () => {
       document.querySelectorAll('.pay-opt').forEach(o => o.classList.remove('selected'));
       opt.classList.add('selected');
       selectedPayment = opt.dataset.method;
+      document.getElementById('cash-fields').style.display = selectedPayment === 'cash' ? 'block' : 'none';
     });
   });
 
@@ -1190,85 +1367,33 @@
   }
 
   // ============================================================
-  // F6 — Quick Hold with two-step confirm dialog
+  // Quick/auto hold helper — used by F6 and by the logout-hold flow
   // ============================================================
-  const f6ConfirmOverlay = document.getElementById('f6-confirm-overlay');
-  const f6SuccessOverlay = document.getElementById('f6-success-overlay');
-  const f6YesBtn = document.getElementById('f6-yes-btn');
-  const f6NoBtn = document.getElementById('f6-no-btn');
-  const f6OkBtn = document.getElementById('f6-ok-btn');
-
-  function setF6Focus(choice) {
-    f6FocusChoice = choice;
-    f6YesBtn.classList.toggle('focused', choice === 'yes');
-    f6NoBtn.classList.toggle('focused', choice === 'no');
-    if (choice === 'yes') f6YesBtn.focus();
-    else f6NoBtn.focus();
-  }
-
-  function openF6Confirm() {
-    if (!cartOrder.length) {
-      showToast('No items to hold');
-      return;
-    }
-    f6ConfirmOverlay.classList.add('open');
-    setF6Focus('no');
-  }
-
-  function closeF6Confirm() {
-    f6ConfirmOverlay.classList.remove('open');
-    focusSearch();
-  }
-
-  function openF6Success() {
-    f6SuccessOverlay.classList.add('open');
-    f6OkBtn.focus();
-  }
-
-  function closeF6Success() {
-    f6SuccessOverlay.classList.remove('open');
-    cart = {};
-    cartOrder = [];
-    renderCart();
-    focusSearch();
-  }
-
-  async function performQuickHold() {
+  async function autoHoldCart(folderName) {
     const items = cartOrder.map(id => cart[id]).filter(Boolean);
-    if (!items.length) return;
+    if (!items.length) return { ok: false, reason: 'empty' };
 
     const totalAmount = items.reduce((sum, i) => sum + i.qty * getUnitPrice(i.product), 0);
     const cartData = items.map(i => ({ productId: i.product.id, qty: i.qty }));
 
     const { error } = await sb.from('held_bills').insert({
       shop_id: profile.shop_id,
-      folder_name: 'Quick Hold',
+      folder_name: folderName,
       cart_data: cartData,
       item_count: items.length,
       total_amount: totalAmount,
       created_by: profile.id
     });
 
-    if (error) {
-      showToast('Failed to hold bill: ' + error.message);
-      closeF6Confirm();
-      return;
-    }
+    if (error) return { ok: false, reason: error.message };
 
     await loadHeldBills();
-    closeF6Confirm();
-    openF6Success();
+    cart = {};
+    cartOrder = [];
+    selectedCartId = null;
+    renderCart();
+    return { ok: true };
   }
-
-  f6YesBtn.addEventListener('click', () => {
-    performQuickHold();
-  });
-  f6NoBtn.addEventListener('click', () => {
-    closeF6Confirm();
-  });
-  f6OkBtn.addEventListener('click', () => {
-    closeF6Success();
-  });
 
   // ============================================================
   // F7 — Held bills list (70vh overlay)
@@ -1330,27 +1455,48 @@
 
   function filterProducts(q) {
     const query = (q || '').trim().toLowerCase();
-    if (!query) return products.slice(0, 50);
+
+    if (prodsearchMode === 'outofstock') {
+      const outOfStock = products.filter(p => Number(p.stock_quantity) <= 0);
+      if (!query) return outOfStock.slice(0, 50);
+      return outOfStock.filter(p =>
+        (p.name || '').toLowerCase().includes(query) ||
+        (p.code || '').toLowerCase().includes(query)
+      ).slice(0, 50);
+    }
+
+    // Normal mode: nothing preloaded until they type (avoids rendering
+    // the whole catalog up front, which is slow/crash-prone for shops
+    // with a large product list), and only in-stock items are shown.
+    if (!query) return [];
     return products.filter(p =>
-      (p.name || '').toLowerCase().includes(query) ||
-      (p.code || '').toLowerCase().includes(query)
+      Number(p.stock_quantity) > 0 &&
+      ((p.name || '').toLowerCase().includes(query) ||
+       (p.code || '').toLowerCase().includes(query))
     ).slice(0, 50);
   }
 
   function renderProdsearchList() {
     prodsearchFiltered = filterProducts(prodsearchInput.value);
+
     if (!prodsearchFiltered.length) {
-      prodsearchList.innerHTML = '<div class="prodsearch-empty">No products match.</div>';
+      const emptyText = prodsearchMode === 'outofstock'
+        ? 'No out-of-stock products.'
+        : (prodsearchInput.value.trim() ? 'No products match.' : 'Type a product code or name to search.');
+      prodsearchList.innerHTML = `<div class="prodsearch-empty">${emptyText}</div>`;
       return;
     }
     if (prodsearchHighlight >= prodsearchFiltered.length) prodsearchHighlight = 0;
     prodsearchList.innerHTML = prodsearchFiltered.map((p, i) => {
       const unitPrice = getUnitPrice(p);
+      const stockNote = prodsearchMode === 'outofstock'
+        ? `<span style="color:var(--error, #DC2626); font-weight:700;">OUT (${p.stock_quantity})</span>`
+        : `${p.unit || 'pcs'}`;
       return `
         <div class="prodsearch-item${i === prodsearchHighlight ? ' highlighted' : ''}" data-idx="${i}" onclick="selectProdsearchItem(${i})">
           <div>
             <div class="ps-name">${p.name}</div>
-            <div class="ps-meta">#${p.code || '—'} · ${p.unit || 'pcs'}</div>
+            <div class="ps-meta">#${p.code || '—'} · ${stockNote}</div>
           </div>
           <div class="ps-price">৳${Number(unitPrice).toFixed(2)}</div>
         </div>
@@ -1366,6 +1512,22 @@
   };
 
   function openProductSearch() {
+    prodsearchMode = 'normal';
+    document.getElementById('prodsearch-title').textContent = 'Search Products';
+    prodsearchInput.value = '';
+    prodsearchHighlight = 0;
+    renderProdsearchList();
+    prodsearchOverlay.classList.add('open');
+    setTimeout(() => prodsearchInput.focus(), 50);
+  }
+
+  // Single F2 press: dedicated lookup for out-of-stock / negative-stock
+  // items (e.g. checking what needs restocking, or informing a customer
+  // something's unavailable) — kept separate from the normal in-stock
+  // search so the everyday flow never surfaces things you can't sell.
+  function openOutOfStockSearch() {
+    prodsearchMode = 'outofstock';
+    document.getElementById('prodsearch-title').textContent = 'Out of Stock Products';
     prodsearchInput.value = '';
     prodsearchHighlight = 0;
     renderProdsearchList();
@@ -1420,22 +1582,23 @@
 
   // ============================================================
   // Global keyboard shortcuts: F6, F7, Space
+  // NOTE: Chrome reserves F6 (address-bar focus) and F7 (caret
+  // browsing prompt) as native browser shortcuts — preventDefault()
+  // cannot fully override these in every Chrome build. Alt+H and
+  // Alt+L are wired as guaranteed-working fallbacks for the same
+  // actions in case F6/F7 get intercepted by the browser first.
   // ============================================================
   document.addEventListener('keydown', (e) => {
-    // F6 — quick hold confirm
-    if (e.key === 'F6') {
+    // F6 / Alt+H — open the Hold panel (moved here from Ctrl+H)
+    if (e.key === 'F6' || (e.altKey && (e.key === 'h' || e.key === 'H'))) {
       e.preventDefault();
-      // If any other overlay is open that isn't F6, ignore or close first
-      if (f6ConfirmOverlay.classList.contains('open')) return;
-      if (f6SuccessOverlay.classList.contains('open')) return;
-      openF6Confirm();
+      holdOverlay.classList.contains('open') ? closeHoldPanel() : openHoldPanel();
       return;
     }
 
-    // F7 — held bills list toggle
-    if (e.key === 'F7') {
+    // F7 / Alt+L — held bills list toggle
+    if (e.key === 'F7' || (e.altKey && (e.key === 'l' || e.key === 'L'))) {
       e.preventDefault();
-      if (f6ConfirmOverlay.classList.contains('open') || f6SuccessOverlay.classList.contains('open')) return;
       toggleF7Panel();
       return;
     }
@@ -1449,8 +1612,6 @@
       if (isOtherTextInput) return;
       if (cartOrder.length === 0) return;
       if (document.getElementById('modal-overlay').classList.contains('open')) return;
-      if (f6ConfirmOverlay.classList.contains('open')) return;
-      if (f6SuccessOverlay.classList.contains('open')) return;
       if (prodsearchOverlay.classList.contains('open')) return;
       if (f7Overlay.classList.contains('open')) return;
       if (holdOverlay.classList.contains('open')) return;
@@ -1459,44 +1620,47 @@
       return;
     }
 
-    // F6 dialog keyboard navigation
-    if (f6ConfirmOverlay.classList.contains('open')) {
-      if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        setF6Focus('yes');
-        return;
-      }
-      if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        setF6Focus('no');
-        return;
-      }
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        if (f6FocusChoice === 'yes') performQuickHold();
-        else closeF6Confirm();
-        return;
-      }
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        closeF6Confirm();
-        return;
-      }
-    }
-
-    if (f6SuccessOverlay.classList.contains('open')) {
-      if (e.key === 'Enter' || e.key === 'Escape') {
-        e.preventDefault();
-        closeF6Success();
-        return;
-      }
-    }
-
     if (f7Overlay.classList.contains('open') && e.key === 'Escape') {
       e.preventDefault();
       closeF7Panel();
     }
   });
+
+  // ============================================================
+  // Logout hook — called by the shared sidebar (layout.js) before it
+  // signs out, so an in-progress bill isn't silently lost. Returns a
+  // Promise<boolean>: true = proceed with logout, false = cancel it.
+  // ============================================================
+  window.billosBeforeLogout = function() {
+    if (!cartOrder.length) return Promise.resolve(true);
+
+    return new Promise((resolve) => {
+      const overlay = document.getElementById('logout-hold-overlay');
+      const okBtn = document.getElementById('logout-hold-ok-btn');
+      const cancelBtn = document.getElementById('logout-hold-cancel-btn');
+      overlay.classList.add('open');
+
+      function cleanup() {
+        overlay.classList.remove('open');
+        okBtn.removeEventListener('click', onOk);
+        cancelBtn.removeEventListener('click', onCancel);
+      }
+      async function onOk() {
+        okBtn.disabled = true; okBtn.textContent = 'Holding...';
+        const result = await autoHoldCart('Logout Auto-hold');
+        okBtn.disabled = false; okBtn.textContent = 'OK';
+        cleanup();
+        resolve(true); // proceed with logout either way — cart is at least saved locally via draft cart if the hold insert failed
+      }
+      function onCancel(e) {
+        e.preventDefault();
+        cleanup();
+        resolve(false);
+      }
+      okBtn.addEventListener('click', onOk);
+      cancelBtn.addEventListener('click', onCancel);
+    });
+  };
 
   init();
 </script>

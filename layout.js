@@ -138,7 +138,14 @@
     });
   }
 
-  function handleLogout() {
+  async function handleLogout() {
+    // Give the current page a chance to intercept (billing.html uses
+    // this to offer holding an in-progress bill before signing out).
+    if (typeof window.billosBeforeLogout === "function") {
+      const shouldContinue = await window.billosBeforeLogout();
+      if (!shouldContinue) return;
+    }
+
     /*
       Keep this compatible with the existing authentication
       implementation. If the project already has a logout
