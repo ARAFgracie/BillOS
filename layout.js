@@ -133,6 +133,19 @@
     const logout = sidebarEl.querySelector("#sidebarLogout");
     if (logout) logout.addEventListener("click", handleLogout);
 
+    // If the current page defines billosBeforeNavigate (billing.html
+    // does, to auto-hold an in-progress bill), run it before actually
+    // navigating away via a sidebar link.
+    sidebarEl.querySelectorAll(".app-sidebar-link").forEach((link) => {
+      link.addEventListener("click", async (e) => {
+        if (typeof window.billosBeforeNavigate !== "function") return; // normal navigation
+        e.preventDefault();
+        const href = link.getAttribute("href");
+        await window.billosBeforeNavigate();
+        window.location.href = href;
+      });
+    });
+
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") closeDrawer();
     });

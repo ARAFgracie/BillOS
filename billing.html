@@ -114,32 +114,67 @@
 
   .modal-overlay{
     position:fixed; inset:0; background:rgba(26,29,41,0.5);
-    display:none; align-items:flex-end; justify-content:center; z-index:10;
+    display:none; align-items:center; justify-content:center; z-index:10;
+    padding:20px;
   }
   .modal-overlay.open{ display:flex; }
   .modal{
-    background:var(--card); border-radius:20px 20px 0 0; padding:24px 20px 28px;
-    width:100%; max-width:600px;
+    background:var(--card); border-radius:20px; padding:24px 20px 28px;
+    width:100%; max-width:420px;
+    max-height:85vh; overflow-y:auto;
     border:1px solid var(--border);
+    box-shadow:0 24px 60px rgba(0,0,0,0.25);
   }
   .modal.h65{
-    height:65vh; max-height:65vh;
+    max-height:min(560px, 85vh);
     display:flex; flex-direction:column;
   }
   .modal h3{ margin:0 0 16px; }
-  .pay-options{ display:flex; gap:10px; margin-bottom:20px; }
-  .pay-opt{
+  .pay-tabs{ display:flex; gap:10px; margin-bottom:18px; }
+  .pay-tab{
     flex:1; text-align:center; padding:12px 0; border-radius:12px;
     border:1.5px solid rgba(0,0,0,0.08); font-weight:700; font-size:14px; cursor:pointer; color:var(--muted);
     background:linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0.25));
     backdrop-filter:blur(14px) saturate(140%);
     -webkit-backdrop-filter:blur(14px) saturate(140%);
+    outline:none;
   }
-  .pay-opt.selected{
+  .pay-tab.selected{
     border-color:var(--blue); color:var(--blue);
     background:linear-gradient(180deg, rgba(238,241,252,0.85), rgba(238,241,252,0.5));
     box-shadow:inset 0 1px 1px rgba(255,255,255,0.9);
   }
+  .pay-tab.kbd-focused, .bank-option.kbd-focused, .bank-select-btn.kbd-focused{
+    outline:2px solid var(--blue); outline-offset:2px;
+  }
+
+  /* ---------- Card payment: bank/method picker ---------- */
+  .bank-select-btn{
+    display:flex; justify-content:space-between; align-items:center;
+    width:100%; padding:12px 14px; margin-bottom:6px; border-radius:12px;
+    border:1.5px solid var(--border); background:rgba(127,127,127,0.05); color:var(--ink);
+    font-size:14.5px; font-weight:600; cursor:pointer;
+  }
+  .bank-select-btn.selected{ border-color:var(--blue); color:var(--blue); }
+  .bank-list{
+    border:1px solid var(--border); border-radius:12px; margin-bottom:14px;
+    max-height:220px; overflow-y:auto;
+  }
+  .bank-option{
+    padding:11px 14px; font-size:14px; font-weight:600; cursor:pointer;
+    border-bottom:1px solid var(--border);
+  }
+  .bank-option:last-child{ border-bottom:none; }
+  .bank-option:hover, .bank-option.kbd-focused{ background:rgba(34,197,94,0.1); }
+  .bank-option.selected{ color:var(--blue); font-weight:800; }
+
+  /* ---------- Post-payment change summary ---------- */
+  .change-summary{ text-align:center; padding:6px 0 4px; }
+  .change-summary .cs-row{ display:flex; justify-content:space-between; padding:9px 2px; font-size:14px; border-bottom:1px solid var(--border); }
+  .change-summary .cs-row:last-child{ border-bottom:none; }
+  .change-summary .cs-label{ color:var(--muted); }
+  .change-summary .cs-change{ font-size:22px; font-weight:800; color:var(--green); margin:14px 0 6px; }
+  .change-summary .cs-change-label{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.3px; }
   .confirm-btn{
     width:100%; padding:14px 0; border:none; border-radius:14px;
     background:var(--green); color:#fff; font-weight:800; font-size:15px; cursor:pointer;
@@ -351,14 +386,21 @@
   html[data-theme="ash"] .empty-card{
     background:var(--card);
   }
-  html[data-theme="dark"] .pay-opt,
-  html[data-theme="ash"] .pay-opt{
+  html[data-theme="dark"] .pay-tab,
+  html[data-theme="ash"] .pay-tab{
     background:rgba(255,255,255,0.04);
     border-color:var(--border);
   }
-  html[data-theme="dark"] .pay-opt.selected,
-  html[data-theme="ash"] .pay-opt.selected{
+  html[data-theme="dark"] .pay-tab.selected,
+  html[data-theme="ash"] .pay-tab.selected{
     background:rgba(34,197,94,0.14);
+  }
+  html[data-theme="dark"] .bank-select-btn,
+  html[data-theme="ash"] .bank-select-btn,
+  html[data-theme="dark"] .bank-list,
+  html[data-theme="ash"] .bank-list{
+    background:rgba(255,255,255,0.04);
+    border-color:var(--border);
   }
 </style>
 </head>
@@ -386,7 +428,7 @@
     <h1>New Bill</h1>
     <div class="sub">Type a product code or name, then press Enter to add</div>
     <input type="text" class="search" id="search" placeholder="Scan or type product code / name..." autocomplete="off">
-    <div class="hint">Press <b>F1 twice</b> to edit qty · <b>F6</b> hold · <b>F7</b> held list · <b>Space</b> pay · <b>Enter</b> (empty) search</div>
+    <div class="hint">Press <b>F2 twice</b> to edit qty · <b>F2 once</b> out-of-stock lookup · <b>F6</b> hold · <b>F7</b> held list · <b>Space</b> pay · <b>Enter</b> (empty) search</div>
 
     <div id="row-head-wrap"></div>
     <div id="product-list"></div>
@@ -407,23 +449,44 @@
 <!-- Payment modal (Charge button + Space bar) -->
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal" id="payment-modal">
-    <h3>Complete Bill — <span id="modal-total"></span></h3>
-    <div class="pay-options">
-      <div class="pay-opt selected" data-method="cash">Cash</div>
-      <div class="pay-opt" data-method="card">Card</div>
-    </div>
-    <div id="cash-fields">
-      <label style="display:block; font-size:11px; font-weight:700; color:var(--muted); margin-bottom:5px; text-transform:uppercase;">Cash Received</label>
-      <input type="number" id="cash-received-input" placeholder="৳ amount given by customer" step="0.01" min="0"
-        style="width:100%; padding:12px 14px; margin-bottom:10px; border-radius:12px; border:1.5px solid var(--border); font-size:16px; outline:none;">
-      <div id="change-due-row" style="display:flex; justify-content:space-between; align-items:center; padding:10px 2px; margin-bottom:14px; font-size:14px; font-weight:700;">
-        <span style="color:var(--muted); font-weight:600;">Change Due</span>
-        <span id="change-due-amount">৳0.00</span>
+    <div id="payment-step">
+      <h3>Complete Bill — <span id="modal-total"></span></h3>
+      <div class="pay-tabs" id="pay-tabs">
+        <div class="pay-tab selected" data-method="cash" tabindex="0">💵 Cash</div>
+        <div class="pay-tab" data-method="card" tabindex="0">💳 Card</div>
       </div>
+
+      <div id="cash-fields">
+        <label style="display:block; font-size:11px; font-weight:700; color:var(--muted); margin-bottom:5px; text-transform:uppercase;">Cash Received</label>
+        <input type="number" id="cash-received-input" placeholder="৳ amount given by customer" step="0.01" min="0"
+          style="width:100%; padding:12px 14px; margin-bottom:10px; border-radius:12px; border:1.5px solid var(--border); font-size:16px; outline:none;">
+        <div id="change-due-row" style="display:flex; justify-content:space-between; align-items:center; padding:10px 2px; margin-bottom:14px; font-size:14px; font-weight:700;">
+          <span style="color:var(--muted); font-weight:600;">Change Due</span>
+          <span id="change-due-amount">৳0.00</span>
+        </div>
+      </div>
+
+      <div id="card-fields" style="display:none;">
+        <label style="display:block; font-size:11px; font-weight:700; color:var(--muted); margin-bottom:5px; text-transform:uppercase;">Select Payment Method</label>
+        <div class="bank-select-btn" id="bank-select-btn" tabindex="0">
+          <span id="bank-select-label">Choose bank / mobile banking...</span>
+          <span>▾</span>
+        </div>
+        <div class="bank-list" id="bank-list" style="display:none;"></div>
+        <div class="msg" id="bank-msg" style="margin-bottom:10px;"></div>
+      </div>
+
+      <button class="confirm-btn" id="confirm-btn">Confirm Payment</button>
+      <div class="msg" id="charge-msg"></div>
+      <a href="#" class="cancel-link" id="cancel-link">Cancel</a>
     </div>
-    <button class="confirm-btn" id="confirm-btn">Confirm Payment</button>
-    <div class="msg" id="charge-msg"></div>
-    <a href="#" class="cancel-link" id="cancel-link">Cancel</a>
+
+    <!-- Post-payment summary (cash: shows change; card: simple confirmation) -->
+    <div id="payment-done-step" style="display:none;">
+      <h3 id="payment-done-title">Payment Complete</h3>
+      <div class="change-summary" id="payment-done-body"></div>
+      <button type="button" class="confirm-btn" id="payment-done-close-btn" style="margin-top:6px;">New Bill (Enter)</button>
+    </div>
   </div>
 </div>
 
@@ -537,7 +600,6 @@
   let f2PressCount = 0;
   let f2SingleTimer = null;
   let selectedCartId = null;  // product row selected by mouse click, for F2 double-press qty edit
-  let pendingRemoveId = null; // cart item awaiting password confirmation to delete
   let heldBills = [];  // held_bills rows for this shop
   let discounts = [];  // active/scheduled discounts for this shop
   let prodsearchHighlight = 0;
@@ -794,6 +856,8 @@
   // if none selected); single-press opens the out-of-stock lookup ----------
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'F2') return;
+    if (document.getElementById('modal-overlay').classList.contains('open')) return;
+    if (document.getElementById('remove-pass-overlay').classList.contains('open')) return;
     e.preventDefault();
     f2PressCount++;
 
@@ -883,21 +947,33 @@
   };
 
   // Deleting a listed item now requires the account password — opens
-  // a confirm modal instead of removing immediately (prevents a
-  // cashier quietly dropping items off a bill after scanning).
-  window.requestRemoveItem = function(id) {
-    if (!cart[id]) return;
-    pendingRemoveId = id;
-    const p = cart[id].product;
-    document.getElementById('remove-pass-item-name').textContent = p.name;
+  // Generic password-confirm gate — used for deleting a cart item AND
+  // for deleting a held bill. Pass a label to show, and an async
+  // function to run once the password checks out.
+  let pendingPasswordAction = null;
+
+  function requestPasswordConfirm(label, onConfirmed) {
+    pendingPasswordAction = onConfirmed;
+    document.getElementById('remove-pass-item-name').textContent = label;
     document.getElementById('remove-pass-input').value = '';
     document.getElementById('remove-pass-msg').className = 'msg';
     document.getElementById('remove-pass-overlay').classList.add('open');
     setTimeout(() => document.getElementById('remove-pass-input').focus(), 50);
+  }
+
+  window.requestRemoveItem = function(id) {
+    if (!cart[id]) return;
+    const p = cart[id].product;
+    requestPasswordConfirm(p.name, () => {
+      delete cart[id];
+      cartOrder = cartOrder.filter(x => x !== id);
+      if (selectedCartId === id) selectedCartId = null;
+      renderCart();
+    });
   };
 
   function closeRemovePassModal() {
-    pendingRemoveId = null;
+    pendingPasswordAction = null;
     document.getElementById('remove-pass-overlay').classList.remove('open');
     focusSearch();
   }
@@ -909,7 +985,7 @@
 
   document.getElementById('remove-pass-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (!pendingRemoveId) return;
+    if (!pendingPasswordAction) return;
     const btn = document.getElementById('remove-pass-confirm');
     const msg = document.getElementById('remove-pass-msg');
     const password = document.getElementById('remove-pass-input').value;
@@ -932,12 +1008,9 @@
       return;
     }
 
-    const id = pendingRemoveId;
-    delete cart[id];
-    cartOrder = cartOrder.filter(x => x !== id);
-    if (selectedCartId === id) selectedCartId = null;
-    renderCart();
+    const action = pendingPasswordAction;
     closeRemovePassModal();
+    if (action) await action();
   });
 
   window.updateQty = function(id, value) {
@@ -1111,12 +1184,15 @@
     focusSearch();
   };
 
-  window.deleteHeldBill = async function(id) {
-    if (!confirm('Delete this held bill? This cannot be undone.')) return;
-    await sb.from('held_bills').delete().eq('id', id);
-    await loadHeldBills();
-    renderHoldPanel();
-    renderF7List();
+  window.deleteHeldBill = function(id) {
+    const held = heldBills.find(h => h.id === id);
+    const label = held ? `held bill (৳${Number(held.total_amount).toFixed(2)}, ${held.item_count} item(s))` : 'this held bill';
+    requestPasswordConfirm(label, async () => {
+      await sb.from('held_bills').delete().eq('id', id);
+      await loadHeldBills();
+      renderHoldPanel();
+      renderF7List();
+    });
   };
 
   // (Ctrl+H removed — hold access now lives on F6, see the global
@@ -1133,6 +1209,42 @@
   }
 
   // ---------- Checkout (Charge button + Space) ----------
+  const BANKS = ['BRAC', 'UCBL', 'AMEX', 'CITY BANK', 'DBBL', 'PBL', 'BKASH', 'NOGOD'];
+  let selectedBank = null;
+  let payTabFocusIndex = 0;   // 0 = cash, 1 = card — for arrow-key tab nav
+  let bankListFocusIndex = -1;
+  let bankListOpen = false;
+
+  // Shown after a successful charge, inside the same modal. Cash
+  // payments get the sold/paid/change breakdown the person asked for;
+  // card payments just get a simple confirmation (no change to show).
+  function showPaymentSuccess(totalAmount) {
+    document.getElementById('payment-step').style.display = 'none';
+    const body = document.getElementById('payment-done-body');
+    const title = document.getElementById('payment-done-title');
+
+    if (selectedPayment === 'cash') {
+      const received = parseFloat(document.getElementById('cash-received-input').value) || totalAmount;
+      const change = Math.max(0, received - totalAmount);
+      title.textContent = '✅ Payment Complete';
+      body.innerHTML = `
+        <div class="cs-row"><span class="cs-label">Bill Total</span><span>৳${totalAmount.toFixed(2)}</span></div>
+        <div class="cs-row"><span class="cs-label">Cash Received</span><span>৳${received.toFixed(2)}</span></div>
+        <div class="cs-change-label">Change Due</div>
+        <div class="cs-change">৳${change.toFixed(2)}</div>
+      `;
+    } else {
+      const bankLabel = selectedBank === 'BKASH' ? 'bKash' : selectedBank === 'NOGOD' ? 'Nagad' : (selectedBank || 'Card');
+      title.textContent = '✅ Payment Complete';
+      body.innerHTML = `
+        <div class="cs-row"><span class="cs-label">Bill Total</span><span>৳${totalAmount.toFixed(2)}</span></div>
+        <div class="cs-row"><span class="cs-label">Method</span><span>${bankLabel}</span></div>
+      `;
+    }
+    document.getElementById('payment-done-step').style.display = 'block';
+    setTimeout(() => document.getElementById('payment-done-close-btn').focus(), 30);
+  }
+
   function updateChangeDue() {
     const totalAmount = parseFloat(document.getElementById('modal-total').textContent.replace('৳', '')) || 0;
     const received = parseFloat(document.getElementById('cash-received-input').value) || 0;
@@ -1151,6 +1263,58 @@
     return change;
   }
 
+  function selectPayTab(method) {
+    selectedPayment = method === 'card' ? (selectedBank || 'card') : 'cash';
+    payTabFocusIndex = method === 'card' ? 1 : 0;
+    document.querySelectorAll('.pay-tab').forEach(o => {
+      const isSel = o.dataset.method === method;
+      o.classList.toggle('selected', isSel);
+      o.classList.toggle('kbd-focused', isSel);
+    });
+    document.getElementById('cash-fields').style.display = method === 'cash' ? 'block' : 'none';
+    document.getElementById('card-fields').style.display = method === 'card' ? 'block' : 'none';
+    if (method === 'cash') {
+      setTimeout(() => document.getElementById('cash-received-input').focus(), 30);
+    }
+  }
+
+  function renderBankList() {
+    const list = document.getElementById('bank-list');
+    list.innerHTML = BANKS.map((b, i) => `
+      <div class="bank-option${b === selectedBank ? ' selected' : ''}${i === bankListFocusIndex ? ' kbd-focused' : ''}" data-idx="${i}" onclick="chooseBank('${b}')">${b === 'BKASH' ? 'bKash' : b === 'NOGOD' ? 'Nagad' : b}</div>
+    `).join('');
+  }
+
+  function openBankList() {
+    bankListOpen = true;
+    if (bankListFocusIndex < 0) bankListFocusIndex = Math.max(0, BANKS.indexOf(selectedBank));
+    renderBankList();
+    document.getElementById('bank-list').style.display = 'block';
+  }
+  function closeBankList() {
+    bankListOpen = false;
+    document.getElementById('bank-list').style.display = 'none';
+  }
+  function toggleBankList() {
+    bankListOpen ? closeBankList() : openBankList();
+  }
+
+  window.chooseBank = function(bank) {
+    selectedBank = bank;
+    selectedPayment = bank;
+    document.getElementById('bank-select-label').textContent = bank === 'BKASH' ? 'bKash' : bank === 'NOGOD' ? 'Nagad' : bank;
+    document.getElementById('bank-select-btn').classList.add('selected');
+    document.getElementById('bank-msg').className = 'msg';
+    closeBankList();
+  };
+
+  document.getElementById('pay-tabs').addEventListener('click', (e) => {
+    const tab = e.target.closest('.pay-tab');
+    if (tab) selectPayTab(tab.dataset.method);
+  });
+
+  document.getElementById('bank-select-btn').addEventListener('click', toggleBankList);
+
   function openPaymentModal(use65vh) {
     const items = cartOrder.map(id => cart[id]).filter(Boolean);
     if (!items.length) return;
@@ -1162,13 +1326,19 @@
     } else {
       modal.classList.remove('h65');
     }
+    document.getElementById('payment-step').style.display = 'block';
+    document.getElementById('payment-done-step').style.display = 'none';
     document.getElementById('cash-received-input').value = '';
+    document.getElementById('charge-msg').className = 'msg';
+    selectedBank = null;
+    bankListFocusIndex = -1;
+    closeBankList();
+    document.getElementById('bank-select-label').textContent = 'Choose bank / mobile banking...';
+    document.getElementById('bank-select-btn').classList.remove('selected');
+    selectPayTab('cash');
     updateChangeDue();
-    document.getElementById('cash-fields').style.display = selectedPayment === 'cash' ? 'block' : 'none';
     document.getElementById('modal-overlay').classList.add('open');
-    if (selectedPayment === 'cash') {
-      setTimeout(() => document.getElementById('cash-received-input').focus(), 50);
-    }
+    setTimeout(() => document.getElementById('cash-received-input').focus(), 50);
   }
 
   document.getElementById('charge-btn').addEventListener('click', () => {
@@ -1188,18 +1358,87 @@
     }
   });
 
-  document.querySelectorAll('.pay-opt').forEach(opt => {
-    opt.addEventListener('click', () => {
-      document.querySelectorAll('.pay-opt').forEach(o => o.classList.remove('selected'));
-      opt.classList.add('selected');
-      selectedPayment = opt.dataset.method;
-      document.getElementById('cash-fields').style.display = selectedPayment === 'cash' ? 'block' : 'none';
-    });
+  // Keyboard-first navigation while the payment modal is open:
+  // Left/Right switch Cash/Card tabs, F6 (or Enter on the bank
+  // button) opens the bank list, Up/Down move through it, Enter
+  // picks one, Escape backs out. Minimizes mouse dependency.
+  document.getElementById('payment-modal').addEventListener('keydown', (e) => {
+    if (document.getElementById('payment-done-step').style.display !== 'none') {
+      if (e.key === 'Enter' || e.key === 'Escape') {
+        e.preventDefault();
+        document.getElementById('payment-done-close-btn').click();
+      }
+      return;
+    }
+
+    if (bankListOpen) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        bankListFocusIndex = (bankListFocusIndex + 1) % BANKS.length;
+        renderBankList();
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        bankListFocusIndex = (bankListFocusIndex - 1 + BANKS.length) % BANKS.length;
+        renderBankList();
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (bankListFocusIndex >= 0) chooseBank(BANKS[bankListFocusIndex]);
+        return;
+      }
+      if (e.key === 'Escape' || e.key === 'F6') {
+        e.preventDefault();
+        closeBankList();
+        return;
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      selectPayTab('cash');
+      return;
+    }
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      selectPayTab('card');
+      return;
+    }
+    if (e.key === 'F6' && document.getElementById('card-fields').style.display !== 'none') {
+      e.preventDefault();
+      openBankList();
+      return;
+    }
+  });
+
+  document.getElementById('payment-done-close-btn').addEventListener('click', () => {
+    document.getElementById('modal-overlay').classList.remove('open');
+    cart = {};
+    cartOrder = [];
+    editingInvoiceId = null;
+    editingOriginalItems = [];
+    selectedCartId = null;
+    renderEditBanner();
+    renderCart();
+    loadProducts();
+    focusSearch();
   });
 
   document.getElementById('confirm-btn').addEventListener('click', async () => {
     const btn = document.getElementById('confirm-btn');
     const msg = document.getElementById('charge-msg');
+
+    const isCardTab = document.getElementById('card-fields').style.display !== 'none';
+    if (isCardTab && !selectedBank) {
+      document.getElementById('bank-msg').textContent = 'Pick a bank or mobile banking method first.';
+      document.getElementById('bank-msg').className = 'msg error';
+      openBankList();
+      return;
+    }
+
     btn.disabled = true; btn.textContent = 'Processing...';
 
     const items = cartOrder.map(id => cart[id]).filter(Boolean);
@@ -1288,23 +1527,12 @@
       }
     }
 
-    msg.textContent = 'Bill updated successfully!';
-    msg.className = 'msg success';
-    btn.textContent = 'Confirm Payment';
-
-    setTimeout(() => {
-      cart = {};
-      cartOrder = [];
-      editingInvoiceId = null;
-      editingOriginalItems = [];
-      renderEditBanner();
-      renderCart();
-      document.getElementById('modal-overlay').classList.remove('open');
-      msg.className = 'msg';
-      btn.disabled = false;
-      loadProducts();
-      focusSearch();
-    }, 1200);
+    btn.disabled = false; btn.textContent = 'Confirm Payment';
+    editingInvoiceId = null;
+    editingOriginalItems = [];
+    renderEditBanner();
+    loadProducts();
+    showPaymentSuccess(totalAmount);
   }
 
   // ---- Normal checkout: create a brand new invoice ----
@@ -1350,20 +1578,9 @@
         .eq('id', i.product.id);
     }
 
-    msg.textContent = 'Bill completed successfully!';
-    msg.className = 'msg success';
-    btn.textContent = 'Confirm Payment';
-
-    setTimeout(() => {
-      cart = {};
-      cartOrder = [];
-      renderCart();
-      document.getElementById('modal-overlay').classList.remove('open');
-      msg.className = 'msg';
-      btn.disabled = false;
-      loadProducts();
-      focusSearch();
-    }, 1200);
+    btn.disabled = false; btn.textContent = 'Confirm Payment';
+    loadProducts();
+    showPaymentSuccess(totalAmount);
   }
 
   // ============================================================
@@ -1528,11 +1745,17 @@
   function openOutOfStockSearch() {
     prodsearchMode = 'outofstock';
     document.getElementById('prodsearch-title').textContent = 'Out of Stock Products';
-    prodsearchInput.value = '';
+    // Carry over whatever was actually being searched for — from the
+    // already-open search overlay if that's where F2 was pressed,
+    // otherwise from the main billing search box — so this shows the
+    // item the person was looking for, not the entire out-of-stock list.
+    const overlayOpen = prodsearchOverlay.classList.contains('open');
+    const carriedQuery = overlayOpen ? prodsearchInput.value : (document.getElementById('search').value || '');
+    prodsearchInput.value = carriedQuery;
     prodsearchHighlight = 0;
     renderProdsearchList();
     prodsearchOverlay.classList.add('open');
-    setTimeout(() => prodsearchInput.focus(), 50);
+    setTimeout(() => { prodsearchInput.focus(); prodsearchInput.select(); }, 50);
   }
 
   function closeProductSearch() {
@@ -1589,6 +1812,10 @@
   // actions in case F6/F7 get intercepted by the browser first.
   // ============================================================
   document.addEventListener('keydown', (e) => {
+    const paymentModalOpen = document.getElementById('modal-overlay').classList.contains('open');
+    const passModalOpen = document.getElementById('remove-pass-overlay').classList.contains('open');
+    if (paymentModalOpen || passModalOpen) return; // those modals own their own key handling
+
     // F6 / Alt+H — open the Hold panel (moved here from Ctrl+H)
     if (e.key === 'F6' || (e.altKey && (e.key === 'h' || e.key === 'H'))) {
       e.preventDefault();
@@ -1661,6 +1888,34 @@
       cancelBtn.addEventListener('click', onCancel);
     });
   };
+
+  // ============================================================
+  // Navigate-away hook — called by the shared sidebar (layout.js) and
+  // by this page's own "← Dashboard" link before leaving billing.html
+  // for another page. Unlike logout, this is SILENT: no confirmation,
+  // the in-progress bill is just auto-held so nothing is lost.
+  //
+  // Honest limitation: this only covers clicks on in-app links (sidebar
+  // drawer, the Dashboard link) because that's the only point a normal
+  // web page can reliably run an async save before navigating. It can't
+  // guarantee the same for the browser Back button, closing the tab, or
+  // typing a new URL — for those, the local draft-cart save (already in
+  // place) is the fallback safety net, though it won't show up in the
+  // Held Bills list until billing.html is opened again.
+  // ============================================================
+  window.billosBeforeNavigate = async function() {
+    if (!cartOrder.length) return true;
+    await autoHoldCart('Auto-hold (left Billing)');
+    return true;
+  };
+
+  document.querySelector('.back-link')?.addEventListener('click', async (e) => {
+    if (!cartOrder.length) return; // nothing to save, let it navigate normally
+    e.preventDefault();
+    const href = e.currentTarget.getAttribute('href');
+    await window.billosBeforeNavigate();
+    window.location.href = href;
+  });
 
   init();
 </script>
