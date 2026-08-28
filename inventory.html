@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BillOS — Inventory</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link rel="stylesheet" href="theme.css">
 <script src="theme.js"></script>
 <link rel="stylesheet" href="layout.css">
@@ -156,35 +155,8 @@
 
   .loading, .no-access{ text-align:center; padding:60px 20px; color:var(--muted); }
 
-  /* ---------- GRN — excel-sheet style table ---------- */
+  /* ---------- Shared small-grid layout (also used by Discounts) ---------- */
   .grn-header-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-  .grn-table{ width:100%; border-collapse:collapse; margin-bottom:10px; font-size:12.5px; }
-  .grn-table th{
-    text-align:left; font-size:10px; font-weight:800; text-transform:uppercase; color:var(--muted);
-    padding:6px 6px; border-bottom:2px solid var(--border);
-  }
-  .grn-table td{
-    padding:5px 4px; border-bottom:1px solid var(--border); vertical-align:top;
-  }
-  .grn-table tr:nth-child(even) td{ background:rgba(127,127,127,0.04); }
-  .grn-table input, .grn-table select{
-    margin-bottom:4px; padding:8px 8px; font-size:12.5px; border-radius:8px;
-  }
-  .grn-new-name, .grn-row-code{ display:none; }
-  .grn-remove-row{
-    width:26px; height:32px; border-radius:8px; border:none;
-    background:rgba(220,38,38,0.15); color:var(--red); cursor:pointer; font-size:12px;
-  }
-  .add-row-btn{
-    background:rgba(34,197,94,0.12); color:var(--blue); border:none;
-    border-radius:10px; padding:9px 14px; font-weight:700; font-size:12.5px; cursor:pointer;
-    margin-bottom:14px;
-  }
-  .grn-total-row{
-    display:flex; justify-content:space-between; align-items:center;
-    font-weight:800; font-size:15px; padding:10px 2px;
-    border-top:1px solid var(--border);
-  }
   .grn-hint{ font-size:11px; color:var(--muted); margin:-4px 0 12px; }
 
   /* ---------- Discounts ---------- */
@@ -232,7 +204,7 @@
       <div class="adjust-wrap">
         <button class="adjust-btn" id="adjust-btn">Adjust ▾</button>
         <div class="adjust-menu" id="adjust-menu">
-          <div class="adjust-option" onclick="openGrn()">📥 GRN (Bulk Add)</div>
+          <a class="adjust-option" href="grn.html" style="text-decoration:none; display:block;">📥 GRN (Bulk Add)</a>
           <div class="adjust-option" onclick="openReturn()">↩ Return to Supplier</div>
           <div class="adjust-option" onclick="openDamage()">⚠ Damage / Loss</div>
           <div class="adjust-option" onclick="openDiscount()">🏷️ Discounts</div>
@@ -296,55 +268,6 @@
         <button type="submit" class="save-btn" id="save-btn">Save Product</button>
         <div class="msg" id="form-msg"></div>
         <a href="#" class="cancel-link" id="close-modal">Cancel</a>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- ============================================================
-     GRN (Goods Receipt Note) — Bulk Add modal, excel-sheet style
-     ============================================================ -->
-<div class="modal-overlay" id="grn-modal-overlay">
-  <div class="modal">
-    <h3>New GRN (Goods Receipt)</h3>
-    <form id="grn-form" style="display:flex; flex-direction:column; min-height:0; flex:1;">
-      <div class="modal-scroll">
-        <div class="grn-header-grid">
-          <div>
-            <label for="grn-number">GRN Number</label>
-            <input type="text" id="grn-number" readonly>
-          </div>
-          <div>
-            <label for="grn-date">Date</label>
-            <input type="date" id="grn-date" required>
-          </div>
-        </div>
-        <label for="grn-supplier">Default Supplier</label>
-        <input type="text" id="grn-supplier" placeholder="e.g. ABC Distributors" required>
-        <div class="grn-hint">Different item from a different supplier? Override it in that row's Supplier cell.</div>
-
-        <label>Items Received</label>
-        <table class="grn-table">
-          <thead>
-            <tr>
-              <th style="width:26%;">Product</th>
-              <th style="width:14%;">Code</th>
-              <th style="width:12%;">Qty</th>
-              <th style="width:14%;">Cost ৳</th>
-              <th style="width:22%;">Supplier (override)</th>
-              <th style="width:6%;"></th>
-            </tr>
-          </thead>
-          <tbody id="grn-items-wrap"></tbody>
-        </table>
-        <button type="button" class="add-row-btn" id="grn-add-row-btn">+ Add Row</button>
-
-        <div class="grn-total-row"><span>Total Cost</span><span id="grn-total">৳0.00</span></div>
-      </div>
-      <div class="modal-footer">
-        <button type="submit" class="save-btn" id="grn-save-btn">Save GRN &amp; Update Stock</button>
-        <div class="msg" id="grn-msg"></div>
-        <a href="#" class="cancel-link" id="grn-close-modal">Cancel</a>
       </div>
     </form>
   </div>
@@ -640,269 +563,6 @@
     await loadProducts();
     setTimeout(() => { overlay.classList.remove('open'); }, 600);
   });
-
-  // ============================================================
-  // GRN (Bulk Add) — Goods Receipt Note
-  // ============================================================
-  const grnOverlay = document.getElementById('grn-modal-overlay');
-  const grnItemsWrap = document.getElementById('grn-items-wrap');
-
-  function productOptionsHtml() {
-    const existing = products
-      .map(p => `<option value="${p.id}">${p.name}${p.code ? ' (#' + p.code + ')' : ''}</option>`)
-      .join('');
-    return `
-      <option value="" disabled selected>Select product...</option>
-      <option value="__new__">+ New Product</option>
-      ${existing}
-    `;
-  }
-
-  function grnRowHtml() {
-    return `
-      <tr class="grn-item-row">
-        <td>
-          <select class="grn-row-product" required onchange="onGrnProductChange(this)">
-            ${productOptionsHtml()}
-          </select>
-          <input type="text" class="grn-new-name" placeholder="New product name">
-        </td>
-        <td><input type="text" class="grn-row-code" placeholder="Code"></td>
-        <td><input type="number" class="grn-row-qty" placeholder="0" step="0.01" min="0.01" required oninput="updateGrnTotal()"></td>
-        <td><input type="number" class="grn-row-cost" placeholder="0.00" step="0.01" min="0" required oninput="updateGrnTotal()"></td>
-        <td><input type="text" class="grn-row-supplier" placeholder="(default)"></td>
-        <td><button type="button" class="grn-remove-row" onclick="this.closest('tr').remove(); updateGrnTotal();">✕</button></td>
-      </tr>
-    `;
-  }
-
-  window.onGrnProductChange = function(selectEl) {
-    const row = selectEl.closest('tr');
-    const newNameInput = row.querySelector('.grn-new-name');
-    const codeInput = row.querySelector('.grn-row-code');
-
-    if (selectEl.value === '__new__') {
-      newNameInput.style.display = 'block';
-      newNameInput.required = true;
-      codeInput.style.display = 'block';
-      codeInput.value = '';
-      codeInput.readOnly = false;
-    } else {
-      newNameInput.style.display = 'none';
-      newNameInput.required = false;
-      newNameInput.value = '';
-      const existing = products.find(p => p.id === selectEl.value);
-      codeInput.style.display = 'block';
-      codeInput.value = existing?.code || '';
-      codeInput.readOnly = true;
-    }
-  };
-
-  window.updateGrnTotal = function() {
-    let total = 0;
-    document.querySelectorAll('.grn-item-row').forEach(row => {
-      const qty = parseFloat(row.querySelector('.grn-row-qty').value) || 0;
-      const cost = parseFloat(row.querySelector('.grn-row-cost').value) || 0;
-      total += qty * cost;
-    });
-    document.getElementById('grn-total').textContent = '৳' + total.toFixed(2);
-  };
-
-  function addGrnRow() {
-    grnItemsWrap.insertAdjacentHTML('beforeend', grnRowHtml());
-  }
-
-  window.openGrn = function() {
-    adjustMenu.classList.remove('open');
-    document.getElementById('grn-form').reset();
-    document.getElementById('grn-number').value = 'GRN-' + Date.now().toString().slice(-8);
-    document.getElementById('grn-date').value = new Date().toISOString().slice(0, 10);
-    grnItemsWrap.innerHTML = '';
-    addGrnRow();
-    updateGrnTotal();
-    document.getElementById('grn-msg').className = 'msg';
-    grnOverlay.classList.add('open');
-  };
-
-  document.getElementById('grn-add-row-btn').addEventListener('click', addGrnRow);
-  document.getElementById('grn-close-modal').addEventListener('click', (e) => {
-    e.preventDefault();
-    grnOverlay.classList.remove('open');
-  });
-
-  function readGrnRows() {
-    const rows = [];
-    document.querySelectorAll('.grn-item-row').forEach(row => {
-      rows.push({
-        productId: row.querySelector('.grn-row-product').value,
-        newName: row.querySelector('.grn-new-name').value.trim(),
-        code: row.querySelector('.grn-row-code').value.trim(),
-        qty: parseFloat(row.querySelector('.grn-row-qty').value),
-        cost: parseFloat(row.querySelector('.grn-row-cost').value),
-        supplier: row.querySelector('.grn-row-supplier').value.trim(),
-      });
-    });
-    return rows;
-  }
-
-  document.getElementById('grn-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = document.getElementById('grn-save-btn');
-    const msg = document.getElementById('grn-msg');
-    btn.disabled = true; btn.textContent = 'Saving...';
-
-    const grnNumber = document.getElementById('grn-number').value;
-    const grnDate = document.getElementById('grn-date').value;
-    const defaultSupplier = document.getElementById('grn-supplier').value;
-    const rows = readGrnRows();
-
-    const invalidRow = rows.find(r => !r.productId || (r.productId === '__new__' && !r.newName) || !r.qty || r.qty <= 0 || isNaN(r.cost) || r.cost < 0);
-    if (invalidRow) {
-      btn.disabled = false; btn.textContent = 'Save GRN & Update Stock';
-      msg.textContent = 'Please fill in every row completely (product, quantity, and cost).';
-      msg.className = 'msg error';
-      return;
-    }
-
-    const totalAmount = rows.reduce((sum, r) => sum + r.qty * r.cost, 0);
-
-    const { data: grn, error: grnError } = await sb
-      .from('grns')
-      .insert({
-        shop_id: profile.shop_id,
-        grn_number: grnNumber,
-        supplier_name: defaultSupplier,
-        created_by: profile.id,
-        total_amount: totalAmount,
-        created_at: new Date(grnDate).toISOString()
-      })
-      .select()
-      .single();
-
-    if (grnError) {
-      btn.disabled = false; btn.textContent = 'Save GRN & Update Stock';
-      msg.textContent = 'Failed to create GRN: ' + grnError.message;
-      msg.className = 'msg error';
-      return;
-    }
-
-    const createdThisGrnByCode = {};
-    const pdfLines = [];
-
-    for (const row of rows) {
-      let productId = row.productId;
-      let productName;
-      const rowSupplier = row.supplier || defaultSupplier;
-
-      if (productId === '__new__') {
-        const typedCode = row.code ? row.code.toLowerCase() : '';
-        const matchedExisting = typedCode
-          ? (products.find(p => (p.code || '').toLowerCase() === typedCode) || createdThisGrnByCode[typedCode])
-          : null;
-
-        if (matchedExisting) {
-          productId = matchedExisting.id;
-          productName = matchedExisting.name;
-          const currentStock = matchedExisting.stock_quantity ?? 0;
-          await sb.from('products').update({ stock_quantity: currentStock + row.qty }).eq('id', productId);
-          matchedExisting.stock_quantity = currentStock + row.qty;
-        } else {
-          const { data: newProduct, error: newProductError } = await sb
-            .from('products')
-            .insert({
-              shop_id: profile.shop_id,
-              name: row.newName,
-              code: row.code || null,
-              price: row.cost,
-              unit: 'pcs',
-              is_weighted: false,
-              stock_quantity: row.qty
-            })
-            .select()
-            .single();
-
-          if (newProductError) {
-            msg.textContent = 'GRN saved, but a new product failed: ' + newProductError.message;
-            msg.className = 'msg error';
-            continue;
-          }
-          productId = newProduct.id;
-          productName = newProduct.name;
-          if (row.code) createdThisGrnByCode[row.code.toLowerCase()] = newProduct;
-        }
-      } else {
-        const existing = products.find(p => p.id === productId);
-        productName = existing?.name || 'Unknown product';
-        const currentStock = existing?.stock_quantity ?? 0;
-        await sb.from('products').update({ stock_quantity: currentStock + row.qty }).eq('id', productId);
-        if (existing) existing.stock_quantity = currentStock + row.qty;
-      }
-
-      await sb.from('grn_items').insert({
-        grn_id: grn.id,
-        product_id: productId,
-        product_name: productName,
-        quantity: row.qty,
-        cost_price: row.cost,
-        line_total: row.qty * row.cost,
-        supplier_name: row.supplier || null
-      });
-
-      pdfLines.push({ name: productName, qty: row.qty, cost: row.cost, total: row.qty * row.cost, supplier: rowSupplier });
-    }
-
-    btn.disabled = false; btn.textContent = 'Save GRN & Update Stock';
-    msg.textContent = 'GRN saved and stock updated!';
-    msg.className = 'msg success';
-
-    downloadGrnPdf({ grnNumber, grnDate, defaultSupplier, totalAmount, lines: pdfLines });
-
-    await loadProducts();
-    setTimeout(() => { grnOverlay.classList.remove('open'); }, 900);
-  });
-
-  function downloadGrnPdf({ grnNumber, grnDate, defaultSupplier, totalAmount, lines }) {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-
-    doc.setFontSize(16);
-    doc.text('Goods Receipt Note (GRN)', 14, 18);
-    doc.setFontSize(10);
-    doc.text('Generated by BillOS', 14, 25);
-
-    doc.setFontSize(11);
-    doc.text('GRN Number: ' + grnNumber, 14, 36);
-    doc.text('Date: ' + grnDate, 14, 43);
-    doc.text('Default Supplier: ' + defaultSupplier, 14, 50);
-
-    let y = 64;
-    doc.setFontSize(9);
-    doc.text('Product', 14, y);
-    doc.text('Supplier', 90, y);
-    doc.text('Qty', 140, y);
-    doc.text('Cost', 160, y);
-    doc.text('Total', 180, y);
-    y += 4;
-    doc.line(14, y, 196, y);
-    y += 8;
-
-    lines.forEach(line => {
-      doc.text(String(line.name).slice(0, 30), 14, y);
-      doc.text(String(line.supplier || '').slice(0, 20), 90, y);
-      doc.text(String(line.qty), 140, y);
-      doc.text('৳' + line.cost.toFixed(2), 160, y);
-      doc.text('৳' + line.total.toFixed(2), 180, y);
-      y += 8;
-    });
-
-    y += 4;
-    doc.line(14, y, 196, y);
-    y += 8;
-    doc.setFontSize(12);
-    doc.text('Total: ৳' + totalAmount.toFixed(2), 160, y);
-
-    doc.save(grnNumber + '.pdf');
-  }
 
   // ============================================================
   // Return to Supplier

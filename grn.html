@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BillOS — GRN</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link rel="stylesheet" href="theme.css">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="layout.css">
+<script src="layout.js" defer></script>
+<style>
+  :root{ --red:#DC2626; }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh;
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 20px;
+    background:linear-gradient(180deg, rgba(255,255,255,0.75), rgba(255,255,255,0.45));
+    backdrop-filter:blur(20px) saturate(150%);
+    -webkit-backdrop-filter:blur(20px) saturate(150%);
+    border-bottom:1px solid rgba(255,255,255,0.6);
+  }
+  html[data-theme="dark"] .topbar, html[data-theme="ash"] .topbar{ background:var(--card); }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .logo{
+    width:38px; height:38px; background:linear-gradient(135deg, var(--blue), #34D399);
+    border-radius:11px; display:flex; align-items:center; justify-content:center;
+    color:#fff; font-weight:800; font-size:17px;
+  }
+  .brand-name{ font-size:18px; font-weight:800; }
+  .back-link{ font-size:13px; color:var(--blue); font-weight:700; text-decoration:none; }
+
+  .content{ padding:20px 24px 60px; max-width:1200px; margin:0 auto; }
+  .page-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:10px; }
+  .page-head h1{ font-size:22px; margin:0; }
+
+  /* ---------- Mode tabs ---------- */
+  .mode-tabs{ display:flex; gap:8px; margin-bottom:18px; flex-wrap:wrap; }
+  .mode-tab{
+    padding:10px 18px; border-radius:12px; font-weight:700; font-size:13.5px; cursor:pointer;
+    border:1.5px solid var(--border); color:var(--muted); background:var(--card);
+  }
+  .mode-tab.active{ border-color:var(--blue); color:var(--blue); background:rgba(34,197,94,0.1); }
+
+  /* ---------- Shared GRN header card ---------- */
+  .grn-header-card{ border-radius:18px; padding:18px; margin-bottom:18px; }
+  .grn-header-grid{ display:grid; grid-template-columns:1fr 1fr 1.4fr; gap:14px; }
+  @media (max-width:700px){ .grn-header-grid{ grid-template-columns:1fr; } }
+  .field label{ display:block; font-size:11px; font-weight:700; color:var(--muted); margin-bottom:5px; text-transform:uppercase; }
+  .field input{
+    width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border);
+    background:rgba(127,127,127,0.05); color:var(--ink); font-size:14px; outline:none;
+  }
+  .field input:focus{ border-color:var(--blue); }
+
+  .section-card{ border-radius:18px; padding:18px; margin-bottom:18px; }
+  .section-title{ font-size:14.5px; font-weight:800; margin-bottom:12px; }
+
+  /* ---------- Manual entry ---------- */
+  .manual-search-row{ display:flex; gap:8px; margin-bottom:10px; position:relative; }
+  .manual-search-row input{
+    flex:1; padding:11px 13px; border-radius:10px; border:1px solid var(--border);
+    background:rgba(127,127,127,0.05); color:var(--ink); font-size:14px; outline:none;
+  }
+  .manual-search-row input:focus{ border-color:var(--blue); }
+  .btn-secondary{
+    padding:0 16px; border-radius:10px; border:1.5px solid var(--blue); background:transparent;
+    color:var(--blue); font-weight:700; font-size:13px; cursor:pointer; white-space:nowrap;
+  }
+  .search-dropdown{
+    position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:20;
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    max-height:260px; overflow-y:auto; box-shadow:0 12px 32px rgba(0,0,0,0.15);
+  }
+  .search-dropdown-item{ padding:10px 13px; cursor:pointer; border-bottom:1px solid var(--border); font-size:13.5px; }
+  .search-dropdown-item:last-child{ border-bottom:none; }
+  .search-dropdown-item:hover, .search-dropdown-item.kbd-focused{ background:rgba(34,197,94,0.1); }
+  .search-dropdown-item .sd-name{ font-weight:700; }
+  .search-dropdown-item .sd-meta{ font-size:11px; color:var(--muted); }
+
+  .info-card{
+    border-radius:14px; padding:14px; margin-bottom:14px;
+    background:rgba(34,197,94,0.06); border:1px solid rgba(34,197,94,0.2);
+    display:none;
+  }
+  .info-card.show{ display:block; }
+  .info-card .ic-title{ font-weight:800; font-size:14px; margin-bottom:2px; }
+  .info-card .ic-meta{ font-size:11.5px; color:var(--muted); margin-bottom:10px; }
+  .info-fields{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  @media (max-width:560px){ .info-fields{ grid-template-columns:1fr; } }
+
+  .add-line-btn{
+    width:100%; margin-top:6px; padding:12px 0; border:none; border-radius:12px;
+    background:linear-gradient(135deg, var(--blue), #22C55E); color:#fff;
+    font-weight:800; font-size:14px; cursor:pointer;
+  }
+  .add-line-btn:disabled{ opacity:0.5; cursor:not-allowed; }
+
+  .lines-table{ width:100%; border-collapse:collapse; font-size:13px; margin-top:6px; }
+  .lines-table th{
+    text-align:left; font-size:10px; font-weight:800; text-transform:uppercase; color:var(--muted);
+    padding:8px 6px; border-bottom:2px solid var(--border);
+  }
+  .lines-table td{ padding:9px 6px; border-bottom:1px solid var(--border); }
+  .lines-table .rm-btn{
+    width:26px; height:26px; border-radius:8px; border:none; background:rgba(220,38,38,0.12); color:var(--red); cursor:pointer;
+  }
+
+  /* ---------- Excel grid ---------- */
+  .grid-wrap{ overflow-x:auto; border-radius:14px; border:1px solid var(--border); }
+  .grn-grid{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:1080px; }
+  .grn-grid th{
+    text-align:left; font-size:9.5px; font-weight:800; text-transform:uppercase; color:var(--muted);
+    padding:8px 6px; border-bottom:2px solid var(--border); background:var(--card); position:sticky; top:0; z-index:2;
+    white-space:nowrap;
+  }
+  .grn-grid td{ padding:5px 5px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  .grn-grid tr:nth-child(even) td{ background:rgba(127,127,127,0.03); }
+  .grn-input{
+    width:100%; padding:7px 8px; border-radius:8px; border:1px solid var(--border);
+    background:rgba(127,127,127,0.04); color:var(--ink); font-size:12.5px; outline:none;
+  }
+  .grn-input:focus{ border-color:var(--blue); background:var(--card); }
+  .grn-input:disabled{ opacity:0.45; cursor:not-allowed; }
+  .grn-input.readonly-field{ background:rgba(127,127,127,0.08); }
+
+  .mode-toggle{ display:flex; gap:2px; }
+  .mode-btn{
+    padding:6px 7px; border-radius:6px; border:1px solid var(--border); background:transparent;
+    color:var(--muted); font-size:10px; font-weight:800; cursor:pointer;
+  }
+  .mode-btn.active{ background:var(--blue); border-color:var(--blue); color:#fff; }
+
+  .product-cell{ position:relative; min-width:180px; }
+  .resolved-badge{
+    font-size:10px; font-weight:700; margin-top:3px; display:none;
+  }
+  .resolved-badge.show{ display:block; }
+  .resolved-badge.is-new{ color:#8B5CF6; }
+  .resolved-badge.is-existing{ color:var(--blue); }
+
+  .grn-row-remove{
+    width:24px; height:24px; border-radius:7px; border:none; background:rgba(220,38,38,0.12); color:var(--red); cursor:pointer; font-size:11px;
+  }
+  .line-total-cell{ font-weight:800; white-space:nowrap; }
+
+  .add-row-btn{
+    background:rgba(34,197,94,0.12); color:var(--blue); border:none;
+    border-radius:10px; padding:9px 14px; font-weight:700; font-size:12.5px; cursor:pointer;
+    margin:12px 0;
+  }
+  .grn-total-row{
+    display:flex; justify-content:space-between; align-items:center;
+    font-weight:800; font-size:16px; padding:12px 4px; border-top:1px solid var(--border); margin-top:6px;
+  }
+  .save-btn{
+    width:100%; padding:14px 0; border:none; border-radius:14px;
+    background:linear-gradient(135deg, var(--blue), #22C55E); color:#fff;
+    font-weight:800; font-size:15px; cursor:pointer; margin-top:6px;
+  }
+  .save-btn:disabled{ opacity:0.5; cursor:not-allowed; }
+  .kbd-hint{ font-size:11px; color:var(--muted); margin:-6px 0 14px; }
+  .kbd-hint b{ color:var(--blue); }
+
+  /* ---------- Reprint tab ---------- */
+  .filter-row{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; align-items:flex-end; }
+  .filter-row .field{ min-width:150px; }
+  .filter-row select{
+    width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border);
+    background:rgba(127,127,127,0.05); color:var(--ink); font-size:13px; outline:none;
+  }
+  .apply-filter-btn{
+    padding:10px 18px; border-radius:10px; border:none; background:var(--blue); color:#fff;
+    font-weight:700; font-size:13px; cursor:pointer;
+  }
+  .grn-history-row{
+    display:flex; justify-content:space-between; align-items:center;
+    border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:8px;
+  }
+  .ghr-left .ghr-num{ font-weight:800; font-size:13.5px; }
+  .ghr-left .ghr-meta{ font-size:11px; color:var(--muted); margin-top:2px; }
+  .ghr-amount{ font-weight:800; margin-right:14px; }
+  .print-btn{
+    padding:8px 14px; border-radius:9px; border:none; background:rgba(34,197,94,0.14); color:var(--blue);
+    font-weight:700; font-size:12px; cursor:pointer;
+  }
+  .empty-note{ text-align:center; color:var(--muted); font-size:13px; padding:30px 10px; }
+
+  /* ---------- Print-confirm & misc modals ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(26,29,41,0.5);
+    display:none; align-items:center; justify-content:center; z-index:50; padding:20px;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal{
+    background:var(--card); border-radius:20px; padding:24px 22px 22px;
+    width:100%; max-width:380px; border:1px solid var(--border);
+    box-shadow:0 24px 60px rgba(0,0,0,0.25);
+  }
+  .modal h3{ margin:0 0 10px; }
+  .modal p{ font-size:13.5px; color:var(--muted); margin:0 0 20px; line-height:1.5; }
+  .modal-btn-row{ display:flex; gap:10px; }
+  .modal-btn{
+    flex:1; padding:12px 0; border-radius:12px; border:1.5px solid var(--border);
+    font-weight:800; font-size:14px; cursor:pointer; background:rgba(127,127,127,0.08); color:var(--ink);
+  }
+  .modal-btn.primary{ background:var(--blue); color:#fff; border-color:var(--blue); }
+  .msg{ margin-top:12px; font-size:13px; padding:9px; border-radius:10px; display:none; }
+  .msg.error{ display:block; background:rgba(220,38,38,0.12); color:var(--red); }
+  .msg.success{ display:block; background:rgba(16,185,129,0.14); color:var(--green); }
+  .toast{
+    position:fixed; top:16px; left:50%; transform:translateX(-50%);
+    background:var(--ink); color:#fff; padding:8px 16px; border-radius:20px;
+    font-size:12.5px; font-weight:600; opacity:0; transition:opacity .2s; z-index:60;
+  }
+  .toast.show{ opacity:1; }
+
+  .loading, .no-access{ text-align:center; padding:60px 20px; color:var(--muted); }
+</style>
+</head>
+<body>
+
+<div id="loading" class="loading">Loading BillOS...</div>
+<div class="toast" id="toast"></div>
+
+<div id="app" style="display:none;">
+  <div class="topbar">
+    <div class="brand">
+      <div class="logo">B</div>
+      <div class="brand-name">BillOS</div>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px;">
+      <a href="inventory.html" class="back-link">← Inventory</a>
+      <div class="theme-switcher">
+        <div class="theme-toggle glass" id="theme-toggle" onclick="toggleThemeMenu()">🎨</div>
+        <div class="theme-menu glass" id="theme-menu"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="page-head"><h1>Goods Receipt (GRN)</h1></div>
+
+    <div class="mode-tabs">
+      <div class="mode-tab active" id="tab-manual" data-tab="manual">📝 Manual Entry</div>
+      <div class="mode-tab" id="tab-excel" data-tab="excel">📊 Excel Sheet</div>
+      <div class="mode-tab" id="tab-reprint" data-tab="reprint">🖨️ Reprint History</div>
+    </div>
+
+    <!-- Shared GRN header (Manual + Excel modes) -->
+    <div class="grn-header-card glass" id="grn-header-section">
+      <div class="grn-header-grid">
+        <div class="field"><label>GRN Number</label><input type="text" id="grn-number" readonly></div>
+        <div class="field"><label>Date</label><input type="date" id="grn-date"></div>
+        <div class="field"><label>Default Vendor</label><input type="text" id="grn-vendor" placeholder="e.g. ABC Distributors"></div>
+      </div>
+    </div>
+
+    <!-- ============================ MANUAL TAB ============================ -->
+    <div id="panel-manual">
+      <div class="section-card glass">
+        <div class="section-title">Add a Product</div>
+        <div class="manual-search-row">
+          <input type="text" id="manual-search-input" placeholder="Search existing product by name or code...">
+          <button type="button" class="btn-secondary" id="manual-new-btn">+ New Product</button>
+          <div class="search-dropdown" id="manual-search-dropdown" style="display:none;"></div>
+        </div>
+
+        <div class="info-card" id="manual-info-card">
+          <div class="ic-title" id="manual-ic-title"></div>
+          <div class="ic-meta" id="manual-ic-meta"></div>
+          <div class="info-fields">
+            <div class="field"><label>Product Name</label><input type="text" id="mf-name"></div>
+            <div class="field"><label>User Code</label><input type="text" id="mf-code"></div>
+            <div class="field"><label>Barcode</label><input type="text" id="mf-barcode" placeholder="optional"></div>
+            <div class="field"><label>Vendor</label><input type="text" id="mf-vendor" placeholder="(uses default vendor)"></div>
+            <div class="field"><label>Quantity</label><input type="number" id="mf-qty" step="0.01" min="0.01"></div>
+            <div class="field"><label>Purchase Rate (৳)</label><input type="number" id="mf-rate" step="0.01" min="0"></div>
+            <div class="field"><label>MRP (৳)</label><input type="number" id="mf-mrp" step="0.01" min="0"></div>
+            <div class="field"><label>Unit</label>
+              <select id="mf-unit" style="width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:rgba(127,127,127,0.05); color:var(--ink); font-size:14px;">
+                <option value="pcs">pcs</option><option value="kg">kg</option><option value="g">g</option>
+              </select>
+            </div>
+          </div>
+          <button type="button" class="add-line-btn" id="manual-add-line-btn" style="margin-top:14px;">+ Add to GRN</button>
+        </div>
+      </div>
+
+      <div class="section-card glass">
+        <div class="section-title">Items in This GRN</div>
+        <div id="manual-lines-wrap"><div class="empty-note">No items added yet.</div></div>
+        <div class="grn-total-row"><span>Total Cost</span><span id="manual-total">৳0.00</span></div>
+        <button type="button" class="save-btn" id="manual-save-btn">Save GRN &amp; Update Stock</button>
+        <div class="msg" id="manual-msg"></div>
+      </div>
+    </div>
+
+    <!-- ============================ EXCEL TAB ============================ -->
+    <div id="panel-excel" style="display:none;">
+      <div class="section-card glass">
+        <div class="section-title">Items Received</div>
+        <div class="kbd-hint">Pick <b>New</b>/<b>Name</b>/<b>Code</b> per row · <b>↑ ↓</b> move between rows · <b>Enter</b> confirm / next field</div>
+        <div class="grid-wrap">
+          <table class="grn-grid">
+            <thead>
+              <tr>
+                <th>#</th><th>Mode</th><th>Product</th><th>Code</th><th>Barcode</th>
+                <th>Qty</th><th>Rate ৳</th><th>MRP ৳</th><th>Vendor</th><th>Total</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="grn-grid-body"></tbody>
+          </table>
+        </div>
+        <button type="button" class="add-row-btn" id="grn-add-row-btn">+ Add Row</button>
+        <div class="grn-total-row"><span>Total Cost</span><span id="excel-total">৳0.00</span></div>
+        <button type="button" class="save-btn" id="excel-save-btn">Save Changes</button>
+        <div class="msg" id="excel-msg"></div>
+      </div>
+    </div>
+
+    <!-- ============================ REPRINT TAB ============================ -->
+    <div id="panel-reprint" style="display:none;">
+      <div class="section-card glass">
+        <div class="section-title">Filter GRN History</div>
+        <div class="filter-row">
+          <div class="field"><label>From</label><input type="date" id="rf-from"></div>
+          <div class="field"><label>To</label><input type="date" id="rf-to"></div>
+          <div class="field" style="flex:1;"><label>Vendor</label>
+            <select id="rf-vendor"><option value="">All vendors</option></select>
+          </div>
+          <button type="button" class="apply-filter-btn" id="rf-apply-btn">Apply</button>
+        </div>
+        <div id="grn-history-list"><div class="empty-note">Loading GRN history...</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="no-access" class="no-access" style="display:none;">Only Owners and Authority can manage GRN.</div>
+
+<!-- Post-save print confirm -->
+<div class="modal-overlay" id="print-confirm-overlay">
+  <div class="modal">
+    <h3>GRN Saved</h3>
+    <p>Stock has been updated. Would you like to print a copy of this GRN?</p>
+    <div class="modal-btn-row">
+      <button type="button" class="modal-btn" id="print-no-btn">No</button>
+      <button type="button" class="modal-btn primary" id="print-yes-btn">Yes, Print</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = "https://ektdcnvraluuwxmqhjvj.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_yTDG8ujXgVE81BNAvPvZlw_tlbfKNTm";
+  const { createClient } = supabase;
+  const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  window.sb = sb;
+
+  let profile = null;
+  let products = [];
+  let manualLines = [];       // finalized lines for Manual tab
+  let manualResolved = null;  // currently-picked product / new-product draft for Manual tab
+  let grnRows = [];           // Excel tab row state
+  let lastSavedGrnForPrint = null; // {grnNumber, grnDate, vendor, totalAmount, lines}
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 1400);
+  }
+
+  function generateGrnNumber() {
+    return 'GRN-' + Date.now().toString().slice(-8);
+  }
+  function generateProductCode() {
+    return 'AUTO' + Math.random().toString(36).slice(2, 8).toUpperCase();
+  }
+  function todayStr() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  async function init() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { window.location.href = 'index.html'; return; }
+
+    const { data: p, error } = await sb
+      .from('profiles')
+      .select('id, full_name, role, shop_id')
+      .eq('id', session.user.id)
+      .single();
+
+    if (error || !p) {
+      document.getElementById('loading').textContent = 'Could not load your profile.';
+      return;
+    }
+    profile = p;
+
+    if (profile.role === 'sales_executive') {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('no-access').style.display = 'block';
+      return;
+    }
+
+    await loadProducts();
+
+    document.getElementById('grn-number').value = generateGrnNumber();
+    document.getElementById('grn-date').value = todayStr();
+
+    resetExcelGrid();
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+
+    wireTabs();
+    wireManualMode();
+    wireExcelMode();
+    wireReprintMode();
+    wireGridKeyboardNav();
+  }
+
+  async function loadProducts() {
+    const { data } = await sb
+      .from('products')
+      .select('*')
+      .eq('shop_id', profile.shop_id)
+      .order('name');
+    products = data || [];
+  }
+
+  function searchProducts(query) {
+    const q = (query || '').trim().toLowerCase();
+    if (!q) return [];
+    return products.filter(p =>
+      (p.name || '').toLowerCase().includes(q) ||
+      (p.code || '').toLowerCase().includes(q) ||
+      (p.barcode || '').toLowerCase().includes(q)
+    ).slice(0, 8);
+  }
+
+  // ============================================================
+  // Tabs
+  // ============================================================
+  function wireTabs() {
+    document.querySelectorAll('.mode-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const which = tab.dataset.tab;
+        document.getElementById('panel-manual').style.display = which === 'manual' ? 'block' : 'none';
+        document.getElementById('panel-excel').style.display = which === 'excel' ? 'block' : 'none';
+        document.getElementById('panel-reprint').style.display = which === 'reprint' ? 'block' : 'none';
+        document.getElementById('grn-header-section').style.display = which === 'reprint' ? 'none' : 'block';
+        if (which === 'reprint') loadGrnHistory();
+      });
+    });
+  }
+
+  // ============================================================
+  // MANUAL MODE
+  // ============================================================
+  function wireManualMode() {
+    const input = document.getElementById('manual-search-input');
+    const dropdown = document.getElementById('manual-search-dropdown');
+    let ddFocus = -1;
+    let ddResults = [];
+
+    function renderDropdown() {
+      ddResults = searchProducts(input.value);
+      if (!ddResults.length) { dropdown.style.display = 'none'; return; }
+      dropdown.innerHTML = ddResults.map((p, i) => `
+        <div class="search-dropdown-item${i === ddFocus ? ' kbd-focused' : ''}" data-idx="${i}">
+          <div class="sd-name">${p.name}</div>
+          <div class="sd-meta">#${p.code || '—'} · stock ${p.stock_quantity}</div>
+        </div>
+      `).join('');
+      dropdown.style.display = 'block';
+      dropdown.querySelectorAll('.search-dropdown-item').forEach(el => {
+        el.addEventListener('click', () => pickExisting(ddResults[+el.dataset.idx]));
+      });
+    }
+
+    input.addEventListener('input', () => { ddFocus = -1; renderDropdown(); });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown') { e.preventDefault(); if (ddResults.length) { ddFocus = (ddFocus + 1) % ddResults.length; renderDropdown(); } }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); if (ddResults.length) { ddFocus = (ddFocus - 1 + ddResults.length) % ddResults.length; renderDropdown(); } }
+      else if (e.key === 'Enter') { e.preventDefault(); if (ddFocus >= 0 && ddResults[ddFocus]) pickExisting(ddResults[ddFocus]); }
+      else if (e.key === 'Escape') { dropdown.style.display = 'none'; }
+    });
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.manual-search-row')) dropdown.style.display = 'none';
+    });
+
+    function pickExisting(p) {
+      dropdown.style.display = 'none';
+      input.value = '';
+      manualResolved = { isNew: false, productId: p.id };
+      document.getElementById('manual-ic-title').textContent = 'Existing product';
+      document.getElementById('manual-ic-meta').textContent = `Currently ${p.stock_quantity} ${p.unit} in stock`;
+      document.getElementById('mf-name').value = p.name;
+      document.getElementById('mf-code').value = p.code || '';
+      document.getElementById('mf-barcode').value = p.barcode || '';
+      document.getElementById('mf-vendor').value = p.vendor || '';
+      document.getElementById('mf-qty').value = '';
+      document.getElementById('mf-rate').value = p.purchase_rate || '';
+      document.getElementById('mf-mrp').value = p.price || '';
+      document.getElementById('mf-unit').value = p.unit || 'pcs';
+      document.getElementById('manual-info-card').classList.add('show');
+      document.getElementById('mf-qty').focus();
+    }
+
+    document.getElementById('manual-new-btn').addEventListener('click', () => {
+      dropdown.style.display = 'none';
+      manualResolved = { isNew: true };
+      document.getElementById('manual-ic-title').textContent = 'New product';
+      document.getElementById('manual-ic-meta').textContent = 'A unique code will be generated automatically';
+      document.getElementById('mf-name').value = input.value.trim();
+      document.getElementById('mf-code').value = generateProductCode();
+      document.getElementById('mf-barcode').value = '';
+      document.getElementById('mf-vendor').value = '';
+      document.getElementById('mf-qty').value = '';
+      document.getElementById('mf-rate').value = '';
+      document.getElementById('mf-mrp').value = '';
+      document.getElementById('mf-unit').value = 'pcs';
+      document.getElementById('manual-info-card').classList.add('show');
+      document.getElementById('mf-name').focus();
+    });
+
+    document.getElementById('manual-add-line-btn').addEventListener('click', () => {
+      if (!manualResolved) return;
+      const name = document.getElementById('mf-name').value.trim();
+      const code = document.getElementById('mf-code').value.trim();
+      const barcode = document.getElementById('mf-barcode').value.trim();
+      const vendor = document.getElementById('mf-vendor').value.trim() || document.getElementById('grn-vendor').value.trim();
+      const qty = parseFloat(document.getElementById('mf-qty').value);
+      const rate = parseFloat(document.getElementById('mf-rate').value);
+      const mrp = parseFloat(document.getElementById('mf-mrp').value);
+      const unit = document.getElementById('mf-unit').value;
+
+      if (!name || !qty || qty <= 0 || isNaN(rate) || rate < 0) {
+        showToast('Fill in name, quantity, and purchase rate first');
+        return;
+      }
+
+      manualLines.push({
+        isNew: manualResolved.isNew,
+        productId: manualResolved.productId || null,
+        name, code, barcode, vendor, qty, rate,
+        mrp: isNaN(mrp) ? rate : mrp,
+        unit
+      });
+
+      manualResolved = null;
+      document.getElementById('manual-info-card').classList.remove('show');
+      renderManualLines();
+    });
+  }
+
+  function renderManualLines() {
+    const wrap = document.getElementById('manual-lines-wrap');
+    if (!manualLines.length) {
+      wrap.innerHTML = '<div class="empty-note">No items added yet.</div>';
+      document.getElementById('manual-total').textContent = '৳0.00';
+      return;
+    }
+    let total = 0;
+    wrap.innerHTML = `
+      <table class="lines-table">
+        <thead><tr><th>Product</th><th>Qty</th><th>Rate</th><th>MRP</th><th>Vendor</th><th>Total</th><th></th></tr></thead>
+        <tbody>
+          ${manualLines.map((l, i) => {
+            const lineTotal = l.qty * l.rate;
+            total += lineTotal;
+            return `<tr>
+              <td>${l.name}${l.isNew ? ' <span style="color:#8B5CF6;font-size:10px;font-weight:800;">NEW</span>' : ''}<div style="font-size:10.5px;color:var(--muted);">#${l.code || '—'}</div></td>
+              <td>${l.qty} ${l.unit}</td>
+              <td>৳${l.rate.toFixed(2)}</td>
+              <td>৳${l.mrp.toFixed(2)}</td>
+              <td>${l.vendor || '—'}</td>
+              <td>৳${lineTotal.toFixed(2)}</td>
+              <td><button type="button" class="rm-btn" data-idx="${i}">✕</button></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+    document.getElementById('manual-total').textContent = '৳' + total.toFixed(2);
+    wrap.querySelectorAll('.rm-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        manualLines.splice(+btn.dataset.idx, 1);
+        renderManualLines();
+      });
+    });
+  }
+
+  document.getElementById('manual-save-btn').addEventListener('click', async () => {
+    if (!manualLines.length) { showToast('Add at least one item first'); return; }
+    await saveGrn(manualLines, document.getElementById('manual-msg'), document.getElementById('manual-save-btn'), () => {
+      manualLines = [];
+      renderManualLines();
+    });
+  });
+
+  // ============================================================
+  // EXCEL MODE
+  // ============================================================
+  function makeEmptyRow() {
+    return { mode: null, resolvedProductId: null, isNew: false, name: '', code: '', barcode: '', qty: '', rate: '', mrp: '', vendor: '' };
+  }
+
+  function resetExcelGrid() {
+    grnRows = Array.from({ length: 10 }, makeEmptyRow);
+    renderExcelGrid();
+  }
+
+  function renderExcelGrid() {
+    const tbody = document.getElementById('grn-grid-body');
+    tbody.innerHTML = grnRows.map((row, i) => `
+      <tr data-row="${i}">
+        <td>${i + 1}</td>
+        <td>
+          <div class="mode-toggle">
+            <button type="button" class="mode-btn${row.mode === 'new' ? ' active' : ''}" data-row="${i}" data-mode="new">New</button>
+            <button type="button" class="mode-btn${row.mode === 'name' ? ' active' : ''}" data-row="${i}" data-mode="name">Name</button>
+            <button type="button" class="mode-btn${row.mode === 'code' ? ' active' : ''}" data-row="${i}" data-mode="code">Code</button>
+          </div>
+        </td>
+        <td class="product-cell">
+          <input type="text" class="grn-input product-search" data-row="${i}" data-col="product"
+            placeholder="${row.mode ? (row.mode === 'new' ? 'New product name...' : row.mode === 'name' ? 'Search by name...' : 'Search by code...') : 'Pick a mode →'}"
+            value="${row.mode === 'new' ? row.name : ''}"
+            ${row.mode ? '' : 'disabled'}>
+          <div class="search-dropdown" id="grid-dd-${i}" style="display:none;"></div>
+          <div class="resolved-badge${row.resolvedProductId || row.isNew ? ' show' : ''}${row.isNew ? ' is-new' : ' is-existing'}">
+            ${row.isNew ? '✦ New product' : (row.resolvedProductId ? '✓ ' + row.name : '')}
+          </div>
+        </td>
+        <td><input type="text" class="grn-input readonly-field" data-row="${i}" data-col="code" value="${row.code}" readonly></td>
+        <td><input type="text" class="grn-input" data-row="${i}" data-col="barcode" value="${row.barcode}" ${row.mode ? '' : 'disabled'}></td>
+        <td><input type="number" class="grn-input" data-row="${i}" data-col="qty" value="${row.qty}" min="0" step="0.01" ${row.mode ? '' : 'disabled'}></td>
+        <td><input type="number" class="grn-input" data-row="${i}" data-col="rate" value="${row.rate}" min="0" step="0.01" ${row.mode ? '' : 'disabled'}></td>
+        <td><input type="number" class="grn-input" data-row="${i}" data-col="mrp" value="${row.mrp}" min="0" step="0.01" ${row.mode ? '' : 'disabled'}></td>
+        <td><input type="text" class="grn-input" data-row="${i}" data-col="vendor" value="${row.vendor}" placeholder="(default)" ${row.mode ? '' : 'disabled'}></td>
+        <td class="line-total-cell">৳${((parseFloat(row.qty) || 0) * (parseFloat(row.rate) || 0)).toFixed(2)}</td>
+        <td><button type="button" class="grn-row-remove" data-row="${i}">✕</button></td>
+      </tr>
+    `).join('');
+
+    wireGridRowEvents();
+    updateExcelTotal();
+  }
+
+  function wireGridRowEvents() {
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const r = +btn.dataset.row;
+        grnRows[r] = makeEmptyRow();
+        grnRows[r].mode = btn.dataset.mode;
+        if (grnRows[r].mode === 'new') {
+          grnRows[r].isNew = true;
+          grnRows[r].code = generateProductCode();
+        }
+        renderExcelGrid();
+        setTimeout(() => document.querySelector(`.product-search[data-row="${r}"]`)?.focus(), 20);
+      });
+    });
+
+    document.querySelectorAll('.grn-input').forEach(input => {
+      const r = +input.dataset.row;
+      const col = input.dataset.col;
+
+      if (col === 'product') {
+        input.addEventListener('input', () => {
+          if (grnRows[r].mode === 'new') {
+            grnRows[r].name = input.value;
+            document.querySelector(`.resolved-badge`); // no-op, updated on next render
+          } else {
+            renderGridDropdown(r, input.value);
+          }
+        });
+        input.addEventListener('keydown', (e) => handleGridProductKeydown(e, r, input));
+        input.addEventListener('blur', () => {
+          if (grnRows[r].mode === 'new') { grnRows[r].name = input.value; updateExcelTotal(); }
+          setTimeout(() => { const dd = document.getElementById('grid-dd-' + r); if (dd) dd.style.display = 'none'; }, 150);
+        });
+      } else {
+        input.addEventListener('change', () => {
+          grnRows[r][col] = input.value;
+          if (col === 'qty' || col === 'rate') updateLineTotalCell(r);
+        });
+      }
+    });
+
+    document.querySelectorAll('.grn-row-remove').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const r = +btn.dataset.row;
+        grnRows.splice(r, 1);
+        if (!grnRows.length) grnRows.push(makeEmptyRow());
+        renderExcelGrid();
+      });
+    });
+  }
+
+  let gridDropdownFocus = -1;
+  let gridDropdownResults = [];
+
+  function renderGridDropdown(r, query) {
+    const dd = document.getElementById('grid-dd-' + r);
+    const mode = grnRows[r].mode;
+    const q = (query || '').trim().toLowerCase();
+    if (!q) { dd.style.display = 'none'; return; }
+
+    gridDropdownResults = products.filter(p => {
+      const hay = mode === 'code' ? (p.code || '') + ' ' + (p.barcode || '') : p.name || '';
+      return hay.toLowerCase().includes(q);
+    }).slice(0, 8);
+
+    if (!gridDropdownResults.length) {
+      dd.innerHTML = '<div class="search-dropdown-item" style="color:var(--muted);">No match found</div>';
+      dd.style.display = 'block';
+      return;
+    }
+    gridDropdownFocus = -1;
+    dd.innerHTML = gridDropdownResults.map((p, i) => `
+      <div class="search-dropdown-item" data-idx="${i}">
+        <div class="sd-name">${p.name}</div>
+        <div class="sd-meta">#${p.code || '—'} · stock ${p.stock_quantity}</div>
+      </div>
+    `).join('');
+    dd.style.display = 'block';
+    dd.querySelectorAll('.search-dropdown-item').forEach(el => {
+      el.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        resolveGridRow(r, gridDropdownResults[+el.dataset.idx]);
+      });
+    });
+  }
+
+  function resolveGridRow(r, product) {
+    grnRows[r].resolvedProductId = product.id;
+    grnRows[r].isNew = false;
+    grnRows[r].name = product.name;
+    grnRows[r].code = product.code || '';
+    grnRows[r].barcode = product.barcode || '';
+    grnRows[r].rate = product.purchase_rate || '';
+    grnRows[r].mrp = product.price || '';
+    grnRows[r].vendor = product.vendor || '';
+    renderExcelGrid();
+    setTimeout(() => document.querySelector(`.grn-input[data-row="${r}"][data-col="qty"]`)?.focus(), 20);
+  }
+
+  function handleGridProductKeydown(e, r, input) {
+    const dd = document.getElementById('grid-dd-' + r);
+    const ddOpen = dd && dd.style.display === 'block';
+    if (ddOpen && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+      e.preventDefault();
+      const len = gridDropdownResults.length;
+      if (!len) return;
+      gridDropdownFocus = e.key === 'ArrowDown' ? (gridDropdownFocus + 1) % len : (gridDropdownFocus - 1 + len) % len;
+      dd.querySelectorAll('.search-dropdown-item').forEach((el, i) => el.classList.toggle('kbd-focused', i === gridDropdownFocus));
+      return;
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (ddOpen && gridDropdownFocus >= 0 && gridDropdownResults[gridDropdownFocus]) {
+        resolveGridRow(r, gridDropdownResults[gridDropdownFocus]);
+      } else if (grnRows[r].mode === 'new') {
+        grnRows[r].name = input.value;
+        document.querySelector(`.grn-input[data-row="${r}"][data-col="qty"]`)?.focus();
+      }
+    }
+  }
+
+  function updateLineTotalCell(r) {
+    const row = document.querySelector(`tr[data-row="${r}"]`);
+    if (!row) return;
+    const total = (parseFloat(grnRows[r].qty) || 0) * (parseFloat(grnRows[r].rate) || 0);
+    row.querySelector('.line-total-cell').textContent = '৳' + total.toFixed(2);
+    updateExcelTotal();
+  }
+
+  function updateExcelTotal() {
+    const total = grnRows.reduce((sum, r) => sum + (parseFloat(r.qty) || 0) * (parseFloat(r.rate) || 0), 0);
+    document.getElementById('excel-total').textContent = '৳' + total.toFixed(2);
+  }
+
+  document.getElementById('grn-add-row-btn').addEventListener('click', () => {
+    grnRows.push(makeEmptyRow());
+    renderExcelGrid();
+  });
+
+  // Grid-wide ↑ / ↓ arrow navigation between rows, same column
+  function wireGridKeyboardNav() {
+    document.getElementById('grn-grid-body').addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+      const active = document.activeElement;
+      if (!active || !active.classList.contains('grn-input') || active.classList.contains('product-search')) return;
+      const r = +active.dataset.row;
+      const col = active.dataset.col;
+      const targetRow = e.key === 'ArrowDown' ? r + 1 : r - 1;
+      const target = document.querySelector(`.grn-input[data-row="${targetRow}"][data-col="${col}"]`);
+      if (target) { e.preventDefault(); target.focus(); target.select && target.select(); }
+    });
+  }
+
+  document.getElementById('excel-save-btn').addEventListener('click', async () => {
+    const validLines = grnRows
+      .filter(r => (r.resolvedProductId || r.isNew) && r.name && parseFloat(r.qty) > 0 && parseFloat(r.rate) >= 0)
+      .map(r => ({
+        isNew: r.isNew, productId: r.resolvedProductId, name: r.name, code: r.code,
+        barcode: r.barcode, vendor: r.vendor || document.getElementById('grn-vendor').value.trim(),
+        qty: parseFloat(r.qty), rate: parseFloat(r.rate), mrp: parseFloat(r.mrp) || parseFloat(r.rate), unit: 'pcs'
+      }));
+
+    if (!validLines.length) { showToast('Fill in at least one complete row'); return; }
+
+    await saveGrn(validLines, document.getElementById('excel-msg'), document.getElementById('excel-save-btn'), () => {
+      resetExcelGrid();
+      document.getElementById('grn-number').value = generateGrnNumber();
+    });
+  });
+
+  // ============================================================
+  // SHARED SAVE LOGIC
+  // ============================================================
+  async function saveGrn(lines, msgEl, btnEl, onDone) {
+    btnEl.disabled = true; btnEl.textContent = 'Saving...';
+    msgEl.className = 'msg';
+
+    const grnNumber = document.getElementById('grn-number').value;
+    const grnDate = document.getElementById('grn-date').value || todayStr();
+    const defaultVendor = document.getElementById('grn-vendor').value.trim();
+    const totalAmount = lines.reduce((sum, l) => sum + l.qty * l.rate, 0);
+
+    const { data: grn, error: grnError } = await sb
+      .from('grns')
+      .insert({
+        shop_id: profile.shop_id,
+        grn_number: grnNumber,
+        supplier_name: defaultVendor,
+        created_by: profile.id,
+        total_amount: totalAmount,
+        created_at: new Date(grnDate).toISOString()
+      })
+      .select()
+      .single();
+
+    if (grnError) {
+      btnEl.disabled = false; btnEl.textContent = 'Save';
+      msgEl.textContent = 'Failed to create GRN: ' + grnError.message;
+      msgEl.className = 'msg error';
+      return;
+    }
+
+    const pdfLines = [];
+
+    for (const l of lines) {
+      let productId = l.productId;
+
+      if (l.isNew) {
+        const { data: newProduct, error: newErr } = await sb
+          .from('products')
+          .insert({
+            shop_id: profile.shop_id,
+            name: l.name, code: l.code || generateProductCode(), barcode: l.barcode || null,
+            price: l.mrp, purchase_rate: l.rate, vendor: l.vendor || null,
+            unit: l.unit || 'pcs', is_weighted: false, stock_quantity: l.qty
+          })
+          .select().single();
+        if (newErr) { msgEl.textContent = 'Some items failed: ' + newErr.message; msgEl.className = 'msg error'; continue; }
+        productId = newProduct.id;
+      } else {
+        const existing = products.find(p => p.id === productId);
+        const currentStock = existing?.stock_quantity ?? 0;
+        await sb.from('products').update({
+          stock_quantity: currentStock + l.qty,
+          purchase_rate: l.rate, price: l.mrp || existing?.price,
+          vendor: l.vendor || existing?.vendor, barcode: l.barcode || existing?.barcode
+        }).eq('id', productId);
+        if (existing) existing.stock_quantity = currentStock + l.qty;
+      }
+
+      await sb.from('grn_items').insert({
+        grn_id: grn.id, product_id: productId, product_name: l.name,
+        quantity: l.qty, cost_price: l.rate, line_total: l.qty * l.rate,
+        supplier_name: l.vendor || defaultVendor, barcode: l.barcode || null, mrp: l.mrp
+      });
+
+      pdfLines.push({ name: l.name, code: l.code, qty: l.qty, rate: l.rate, mrp: l.mrp, vendor: l.vendor || defaultVendor, total: l.qty * l.rate });
+    }
+
+    btnEl.disabled = false; btnEl.textContent = 'Saved!';
+    msgEl.textContent = 'GRN saved and stock updated!';
+    msgEl.className = 'msg success';
+
+    lastSavedGrnForPrint = { grnNumber, grnDate, vendor: defaultVendor, totalAmount, lines: pdfLines };
+    await loadProducts();
+    showToast('GRN saved');
+
+    setTimeout(() => {
+      btnEl.textContent = btnEl.id === 'manual-save-btn' ? 'Save GRN & Update Stock' : 'Save Changes';
+      msgEl.className = 'msg';
+      onDone();
+      document.getElementById('print-confirm-overlay').classList.add('open');
+    }, 500);
+  }
+
+  document.getElementById('print-no-btn').addEventListener('click', () => {
+    document.getElementById('print-confirm-overlay').classList.remove('open');
+  });
+  document.getElementById('print-yes-btn').addEventListener('click', () => {
+    document.getElementById('print-confirm-overlay').classList.remove('open');
+    if (lastSavedGrnForPrint) downloadGrnPdf(lastSavedGrnForPrint);
+  });
+
+  // ============================================================
+  // PDF generation (used by save-flow print AND reprint history)
+  // ============================================================
+  function downloadGrnPdf({ grnNumber, grnDate, vendor, totalAmount, lines }) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.setFontSize(16);
+    doc.text('Goods Receipt Note (GRN)', 14, 18);
+    doc.setFontSize(10);
+    doc.text('Generated by BillOS', 14, 25);
+
+    doc.setFontSize(11);
+    doc.text('GRN Number: ' + grnNumber, 14, 36);
+    doc.text('Date: ' + grnDate, 14, 43);
+    doc.text('Vendor: ' + (vendor || '—'), 14, 50);
+
+    let y = 64;
+    doc.setFontSize(8.5);
+    doc.text('Product', 14, y);
+    doc.text('Code', 78, y);
+    doc.text('Qty', 105, y);
+    doc.text('Rate', 122, y);
+    doc.text('MRP', 142, y);
+    doc.text('Vendor', 162, y);
+    doc.text('Total', 184, y);
+    y += 4;
+    doc.line(14, y, 196, y);
+    y += 8;
+
+    lines.forEach(line => {
+      if (y > 275) { doc.addPage(); y = 20; }
+      doc.text(String(line.name).slice(0, 28), 14, y);
+      doc.text(String(line.code || '—').slice(0, 12), 78, y);
+      doc.text(String(line.qty), 105, y);
+      doc.text('৳' + Number(line.rate).toFixed(2), 122, y);
+      doc.text('৳' + Number(line.mrp).toFixed(2), 142, y);
+      doc.text(String(line.vendor || '—').slice(0, 12), 162, y);
+      doc.text('৳' + Number(line.total).toFixed(2), 184, y);
+      y += 8;
+    });
+
+    y += 4;
+    doc.line(14, y, 196, y);
+    y += 8;
+    doc.setFontSize(12);
+    doc.text('Total: ৳' + Number(totalAmount).toFixed(2), 160, y);
+
+    doc.save(grnNumber + '.pdf');
+  }
+
+  // ============================================================
+  // REPRINT HISTORY
+  // ============================================================
+  let grnHistoryAll = [];
+
+  function wireReprintMode() {
+    document.getElementById('rf-apply-btn').addEventListener('click', applyHistoryFilter);
+  }
+
+  async function loadGrnHistory() {
+    const { data, error } = await sb
+      .from('grns')
+      .select('*')
+      .eq('shop_id', profile.shop_id)
+      .order('created_at', { ascending: false })
+      .limit(200);
+
+    if (error) {
+      document.getElementById('grn-history-list').innerHTML = '<div class="empty-note">Could not load GRN history.</div>';
+      return;
+    }
+    grnHistoryAll = data || [];
+
+    const vendors = [...new Set(grnHistoryAll.map(g => g.supplier_name).filter(Boolean))];
+    const vendorSelect = document.getElementById('rf-vendor');
+    vendorSelect.innerHTML = '<option value="">All vendors</option>' + vendors.map(v => `<option value="${v}">${v}</option>`).join('');
+
+    applyHistoryFilter();
+  }
+
+  function applyHistoryFilter() {
+    const from = document.getElementById('rf-from').value;
+    const to = document.getElementById('rf-to').value;
+    const vendor = document.getElementById('rf-vendor').value;
+
+    let filtered = grnHistoryAll;
+    if (from) filtered = filtered.filter(g => new Date(g.created_at) >= new Date(from));
+    if (to) filtered = filtered.filter(g => new Date(g.created_at) <= new Date(to + 'T23:59:59'));
+    if (vendor) filtered = filtered.filter(g => g.supplier_name === vendor);
+
+    renderGrnHistory(filtered);
+  }
+
+  function renderGrnHistory(list) {
+    const container = document.getElementById('grn-history-list');
+    if (!list.length) {
+      container.innerHTML = '<div class="empty-note">No GRNs match this filter.</div>';
+      return;
+    }
+    container.innerHTML = list.map(g => {
+      const date = new Date(g.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      return `
+        <div class="grn-history-row">
+          <div class="ghr-left">
+            <div class="ghr-num">${g.grn_number || ('#' + g.id.slice(0, 8))}</div>
+            <div class="ghr-meta">${date} · ${g.supplier_name || 'No vendor'}</div>
+          </div>
+          <div style="display:flex; align-items:center;">
+            <div class="ghr-amount">৳${Number(g.total_amount).toFixed(2)}</div>
+            <button type="button" class="print-btn" data-id="${g.id}" data-num="${g.grn_number}" data-date="${date}" data-vendor="${g.supplier_name || ''}" data-total="${g.total_amount}">🖨️ Print</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    container.querySelectorAll('.print-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        btn.disabled = true; btn.textContent = 'Loading...';
+        const { data: items } = await sb.from('grn_items').select('*').eq('grn_id', btn.dataset.id);
+        btn.disabled = false; btn.textContent = '🖨️ Print';
+        const lines = (items || []).map(it => ({
+          name: it.product_name, code: '', qty: it.quantity, rate: it.cost_price,
+          mrp: it.mrp || it.cost_price, vendor: it.supplier_name, total: it.line_total
+        }));
+        downloadGrnPdf({ grnNumber: btn.dataset.num, grnDate: btn.dataset.date, vendor: btn.dataset.vendor, totalAmount: btn.dataset.total, lines });
+      });
+    });
+  }
+
+  init();
+</script>
+
+</body>
+</html>
