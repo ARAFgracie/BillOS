@@ -257,7 +257,7 @@
       <div class="grn-header-grid">
         <div class="field"><label>GRN Number</label><input type="text" id="grn-number" readonly></div>
         <div class="field"><label>Date</label><input type="date" id="grn-date"></div>
-        <div class="field"><label>Default Vendor</label><input type="text" id="grn-vendor" placeholder="e.g. ABC Distributors"></div>
+        <div class="field"><label>Default Vendor</label><select id="grn-vendor"></select></div>
       </div>
     </div>
 
@@ -278,10 +278,11 @@
             <div class="field"><label>Product Name</label><input type="text" id="mf-name"></div>
             <div class="field"><label>User Code</label><input type="text" id="mf-code"></div>
             <div class="field"><label>Barcode</label><input type="text" id="mf-barcode" placeholder="optional"></div>
-            <div class="field"><label>Vendor</label><input type="text" id="mf-vendor" placeholder="(uses default vendor)"></div>
+            <div class="field"><label>Vendor</label><select id="mf-vendor"></select></div>
             <div class="field"><label>Quantity</label><input type="number" id="mf-qty" step="0.01" min="0.01"></div>
             <div class="field"><label>Purchase Rate (৳)</label><input type="number" id="mf-rate" step="0.01" min="0"></div>
             <div class="field"><label>MRP (৳)</label><input type="number" id="mf-mrp" step="0.01" min="0"></div>
+            <div class="field"><label>Margin %</label><input type="number" id="mf-margin" step="0.01" min="0" placeholder="auto-fills with MRP"></div>
             <div class="field"><label>Unit</label>
               <select id="mf-unit" style="width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:rgba(127,127,127,0.05); color:var(--ink); font-size:14px;">
                 <option value="pcs">pcs</option><option value="kg">kg</option><option value="g">g</option>
@@ -311,7 +312,7 @@
             <thead>
               <tr>
                 <th>#</th><th>Mode</th><th>Product</th><th>Code</th><th>Barcode</th>
-                <th>Qty</th><th>Rate ৳</th><th>MRP ৳</th><th>Vendor</th><th>Total</th><th></th>
+                <th>Qty</th><th>Rate ৳</th><th>MRP ৳</th><th>Margin %</th><th>Vendor</th><th>Total</th><th></th>
               </tr>
             </thead>
             <tbody id="grn-grid-body"></tbody>
@@ -356,6 +357,21 @@
   </div>
 </div>
 
+<!-- Add New Vendor -->
+<div class="modal-overlay" id="new-vendor-overlay">
+  <div class="modal">
+    <h3>Add New Vendor</h3>
+    <p>This adds the vendor to your shop's approved list so it can be picked from the dropdown from now on.</p>
+    <input type="text" id="new-vendor-input" placeholder="Vendor name"
+      style="width:100%; padding:11px 13px; border-radius:10px; border:1px solid var(--border); background:rgba(127,127,127,0.05); color:var(--ink); font-size:14px; outline:none; margin-bottom:14px;">
+    <div class="msg" id="new-vendor-msg"></div>
+    <div class="modal-btn-row">
+      <button type="button" class="modal-btn" id="new-vendor-cancel">Cancel</button>
+      <button type="button" class="modal-btn primary" id="new-vendor-save">Save Vendor</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const SUPABASE_URL = "https://ektdcnvraluuwxmqhjvj.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_yTDG8ujXgVE81BNAvPvZlw_tlbfKNTm";
@@ -365,10 +381,12 @@
 
   let profile = null;
   let products = [];
+  let vendors = [];           // this shop's approved vendor list — dropdown-only, no free text
   let manualLines = [];       // finalized lines for Manual tab
   let manualResolved = null;  // currently-picked product / new-product draft for Manual tab
   let grnRows = [];           // Excel tab row state
   let lastSavedGrnForPrint = null; // {grnNumber, grnDate, vendor, totalAmount, lines}
+  let vendorDropdownPendingEl = null; // which vendor dropdown triggered "+ Add New Vendor"
 
   function showToast(msg) {
     const t = document.getElementById('toast');
@@ -380,12 +398,97 @@
   function generateGrnNumber() {
     return 'GRN-' + Date.now().toString().slice(-8);
   }
+  // User code: exactly 5 numeric digits (e.g. 12345), unique within this shop's products.
   function generateProductCode() {
-    return 'AUTO' + Math.random().toString(36).slice(2, 8).toUpperCase();
+    let code;
+    let tries = 0;
+    do {
+      code = String(Math.floor(10000 + Math.random() * 90000));
+      tries++;
+    } while (products.some(p => p.code === code) && tries < 50);
+    return code;
+  }
+  // Barcode: "A" followed by 10 digits (e.g. A1234567890), unique within this shop's products.
+  function generateBarcode() {
+    let bc;
+    let tries = 0;
+    do {
+      let digits = '';
+      for (let i = 0; i < 10; i++) digits += Math.floor(Math.random() * 10);
+      bc = 'A' + digits;
+      tries++;
+    } while (products.some(p => p.barcode === bc) && tries < 50);
+    return bc;
   }
   function todayStr() {
     return new Date().toISOString().slice(0, 10);
   }
+
+  // ============================================================
+  // Vendor list — dropdown-only. Nobody can free-type a vendor name
+  // into a GRN row; new vendors are added deliberately through the
+  // "+ Add New Vendor..." option, which writes to the vendors table.
+  // ============================================================
+  async function loadVendors() {
+    const { data } = await sb.from('vendors').select('*').eq('shop_id', profile.shop_id).order('name');
+    vendors = data || [];
+    refreshAllVendorSelects();
+  }
+
+  function vendorOptionsHtml(selected) {
+    const opts = ['<option value="">— No vendor —</option>'];
+    vendors.forEach(v => {
+      opts.push(`<option value="${v.name}"${v.name === selected ? ' selected' : ''}>${v.name}</option>`);
+    });
+    opts.push('<option value="__new__">+ Add New Vendor...</option>');
+    return opts.join('');
+  }
+
+  function refreshAllVendorSelects() {
+    const headerSel = document.getElementById('grn-vendor');
+    if (headerSel) { const cur = headerSel.value === '__new__' ? '' : headerSel.value; headerSel.innerHTML = vendorOptionsHtml(cur); }
+    const manualSel = document.getElementById('mf-vendor');
+    if (manualSel) { const cur = manualSel.value === '__new__' ? '' : manualSel.value; manualSel.innerHTML = vendorOptionsHtml(cur); }
+    document.querySelectorAll('.grn-vendor-select').forEach(sel => {
+      const cur = sel.value === '__new__' ? '' : sel.value;
+      sel.innerHTML = vendorOptionsHtml(cur);
+    });
+  }
+
+  function wireVendorSelect(selectEl) {
+    selectEl.addEventListener('change', () => {
+      if (selectEl.value === '__new__') {
+        vendorDropdownPendingEl = selectEl;
+        document.getElementById('new-vendor-input').value = '';
+        document.getElementById('new-vendor-msg').className = 'msg';
+        document.getElementById('new-vendor-overlay').classList.add('open');
+        setTimeout(() => document.getElementById('new-vendor-input').focus(), 50);
+      }
+    });
+  }
+
+  document.getElementById('new-vendor-cancel').addEventListener('click', () => {
+    if (vendorDropdownPendingEl) vendorDropdownPendingEl.value = '';
+    document.getElementById('new-vendor-overlay').classList.remove('open');
+  });
+
+  document.getElementById('new-vendor-save').addEventListener('click', async () => {
+    const name = document.getElementById('new-vendor-input').value.trim();
+    const msg = document.getElementById('new-vendor-msg');
+    if (!name) { msg.textContent = 'Enter a vendor name.'; msg.className = 'msg error'; return; }
+
+    const { error } = await sb.from('vendors').insert({ shop_id: profile.shop_id, name });
+    if (error && !error.message.includes('duplicate')) {
+      msg.textContent = 'Failed: ' + error.message;
+      msg.className = 'msg error';
+      return;
+    }
+
+    await loadVendors();
+    if (vendorDropdownPendingEl) vendorDropdownPendingEl.value = name;
+    document.getElementById('new-vendor-overlay').classList.remove('open');
+    vendorDropdownPendingEl = null;
+  });
 
   async function init() {
     const { data: { session } } = await sb.auth.getSession();
@@ -421,9 +524,11 @@
 
     wireTabs();
     wireManualMode();
-    wireExcelMode();
     wireReprintMode();
     wireGridKeyboardNav();
+    wireVendorSelect(document.getElementById('grn-vendor'));
+    wireVendorSelect(document.getElementById('mf-vendor'));
+    await loadVendors();
   }
 
   async function loadProducts() {
@@ -507,10 +612,17 @@
       document.getElementById('mf-name').value = p.name;
       document.getElementById('mf-code').value = p.code || '';
       document.getElementById('mf-barcode').value = p.barcode || '';
+      document.getElementById('mf-barcode').readOnly = false;
       document.getElementById('mf-vendor').value = p.vendor || '';
       document.getElementById('mf-qty').value = '';
       document.getElementById('mf-rate').value = p.purchase_rate || '';
       document.getElementById('mf-mrp').value = p.price || '';
+      document.getElementById('mf-margin').value = '';
+      if (p.purchase_rate && p.price) {
+        const state = { mrp: p.price, rate: p.purchase_rate, margin: '' };
+        recalcPricing(state, 'rate');
+        document.getElementById('mf-margin').value = state.margin;
+      }
       document.getElementById('mf-unit').value = p.unit || 'pcs';
       document.getElementById('manual-info-card').classList.add('show');
       document.getElementById('mf-qty').focus();
@@ -520,17 +632,36 @@
       dropdown.style.display = 'none';
       manualResolved = { isNew: true };
       document.getElementById('manual-ic-title').textContent = 'New product';
-      document.getElementById('manual-ic-meta').textContent = 'A unique code will be generated automatically';
+      document.getElementById('manual-ic-meta').textContent = 'A unique code and barcode are generated automatically';
       document.getElementById('mf-name').value = input.value.trim();
       document.getElementById('mf-code').value = generateProductCode();
-      document.getElementById('mf-barcode').value = '';
+      document.getElementById('mf-barcode').value = generateBarcode();
+      document.getElementById('mf-barcode').readOnly = true;
       document.getElementById('mf-vendor').value = '';
       document.getElementById('mf-qty').value = '';
       document.getElementById('mf-rate').value = '';
       document.getElementById('mf-mrp').value = '';
+      document.getElementById('mf-margin').value = '';
       document.getElementById('mf-unit').value = 'pcs';
       document.getElementById('manual-info-card').classList.add('show');
       document.getElementById('mf-name').focus();
+    });
+
+    // Bidirectional MRP ⇄ Purchase Rate ⇄ Margin% for Manual mode
+    ['mf-mrp', 'mf-rate', 'mf-margin'].forEach(id => {
+      const field = id === 'mf-mrp' ? 'mrp' : id === 'mf-rate' ? 'rate' : 'margin';
+      document.getElementById(id).addEventListener('input', (e) => {
+        const state = {
+          mrp: document.getElementById('mf-mrp').value,
+          rate: document.getElementById('mf-rate').value,
+          margin: document.getElementById('mf-margin').value
+        };
+        recalcPricing(state, field);
+        ['mrp', 'rate', 'margin'].forEach(c => {
+          const el = document.getElementById('mf-' + c);
+          if (document.activeElement !== el) el.value = state[c];
+        });
+      });
     });
 
     document.getElementById('manual-add-line-btn').addEventListener('click', () => {
@@ -538,7 +669,7 @@
       const name = document.getElementById('mf-name').value.trim();
       const code = document.getElementById('mf-code').value.trim();
       const barcode = document.getElementById('mf-barcode').value.trim();
-      const vendor = document.getElementById('mf-vendor').value.trim() || document.getElementById('grn-vendor').value.trim();
+      const vendor = document.getElementById('mf-vendor').value || document.getElementById('grn-vendor').value;
       const qty = parseFloat(document.getElementById('mf-qty').value);
       const rate = parseFloat(document.getElementById('mf-rate').value);
       const mrp = parseFloat(document.getElementById('mf-mrp').value);
@@ -612,7 +743,7 @@
   // EXCEL MODE
   // ============================================================
   function makeEmptyRow() {
-    return { mode: null, resolvedProductId: null, isNew: false, name: '', code: '', barcode: '', qty: '', rate: '', mrp: '', vendor: '' };
+    return { mode: null, resolvedProductId: null, isNew: false, name: '', code: '', barcode: '', qty: '', rate: '', mrp: '', margin: '', vendor: '' };
   }
 
   function resetExcelGrid() {
@@ -643,11 +774,12 @@
           </div>
         </td>
         <td><input type="text" class="grn-input readonly-field" data-row="${i}" data-col="code" value="${row.code}" readonly></td>
-        <td><input type="text" class="grn-input" data-row="${i}" data-col="barcode" value="${row.barcode}" ${row.mode ? '' : 'disabled'}></td>
+        <td><input type="text" class="grn-input${row.isNew ? ' readonly-field' : ''}" data-row="${i}" data-col="barcode" value="${row.barcode}" ${row.mode ? '' : 'disabled'} ${row.isNew ? 'readonly' : ''}></td>
         <td><input type="number" class="grn-input" data-row="${i}" data-col="qty" value="${row.qty}" min="0" step="0.01" ${row.mode ? '' : 'disabled'}></td>
         <td><input type="number" class="grn-input" data-row="${i}" data-col="rate" value="${row.rate}" min="0" step="0.01" ${row.mode ? '' : 'disabled'}></td>
         <td><input type="number" class="grn-input" data-row="${i}" data-col="mrp" value="${row.mrp}" min="0" step="0.01" ${row.mode ? '' : 'disabled'}></td>
-        <td><input type="text" class="grn-input" data-row="${i}" data-col="vendor" value="${row.vendor}" placeholder="(default)" ${row.mode ? '' : 'disabled'}></td>
+        <td><input type="number" class="grn-input" data-row="${i}" data-col="margin" value="${row.margin}" min="0" step="0.01" placeholder="%" ${row.mode ? '' : 'disabled'}></td>
+        <td><select class="grn-input grn-vendor-select" data-row="${i}" data-col="vendor" ${row.mode ? '' : 'disabled'}>${vendorOptionsHtml(row.vendor)}</select></td>
         <td class="line-total-cell">৳${((parseFloat(row.qty) || 0) * (parseFloat(row.rate) || 0)).toFixed(2)}</td>
         <td><button type="button" class="grn-row-remove" data-row="${i}">✕</button></td>
       </tr>
@@ -655,6 +787,32 @@
 
     wireGridRowEvents();
     updateExcelTotal();
+  }
+
+  // Bidirectional MRP ⇄ Purchase Rate ⇄ Margin% — fill in any two and
+  // the third recalculates. Margin here is the standard retail
+  // definition: (MRP − Rate) / MRP × 100 (margin on selling price,
+  // not markup on cost).
+  function recalcPricing(state, changedField) {
+    const mrp = parseFloat(state.mrp);
+    const rate = parseFloat(state.rate);
+    const margin = parseFloat(state.margin);
+
+    if (changedField === 'mrp') {
+      if (!isNaN(mrp) && !isNaN(margin)) {
+        state.rate = (mrp * (1 - margin / 100)).toFixed(2);
+      } else if (!isNaN(mrp) && !isNaN(rate)) {
+        state.margin = (((mrp - rate) / mrp) * 100).toFixed(2);
+      }
+    } else if (changedField === 'rate') {
+      if (!isNaN(mrp) && !isNaN(rate)) {
+        state.margin = (((mrp - rate) / mrp) * 100).toFixed(2);
+      }
+    } else if (changedField === 'margin') {
+      if (!isNaN(mrp) && !isNaN(margin)) {
+        state.rate = (mrp * (1 - margin / 100)).toFixed(2);
+      }
+    }
   }
 
   function wireGridRowEvents() {
@@ -666,6 +824,7 @@
         if (grnRows[r].mode === 'new') {
           grnRows[r].isNew = true;
           grnRows[r].code = generateProductCode();
+          grnRows[r].barcode = generateBarcode();
         }
         renderExcelGrid();
         setTimeout(() => document.querySelector(`.product-search[data-row="${r}"]`)?.focus(), 20);
@@ -680,7 +839,6 @@
         input.addEventListener('input', () => {
           if (grnRows[r].mode === 'new') {
             grnRows[r].name = input.value;
-            document.querySelector(`.resolved-badge`); // no-op, updated on next render
           } else {
             renderGridDropdown(r, input.value);
           }
@@ -690,12 +848,36 @@
           if (grnRows[r].mode === 'new') { grnRows[r].name = input.value; updateExcelTotal(); }
           setTimeout(() => { const dd = document.getElementById('grid-dd-' + r); if (dd) dd.style.display = 'none'; }, 150);
         });
+      } else if (col === 'mrp' || col === 'rate' || col === 'margin') {
+        // Live bidirectional recalc: fill any two of MRP/Rate/Margin%
+        // and the third fills itself in — without a full grid
+        // re-render, so focus/typing isn't interrupted.
+        input.addEventListener('input', () => {
+          grnRows[r][col] = input.value;
+          recalcPricing(grnRows[r], col);
+          const rowEl = document.querySelector(`tr[data-row="${r}"]`);
+          if (rowEl) {
+            ['mrp', 'rate', 'margin'].forEach(c => {
+              if (c === col) return;
+              const cell = rowEl.querySelector(`[data-col="${c}"]`);
+              if (cell && document.activeElement !== cell) cell.value = grnRows[r][c];
+            });
+          }
+          updateLineTotalCell(r);
+        });
       } else {
         input.addEventListener('change', () => {
           grnRows[r][col] = input.value;
-          if (col === 'qty' || col === 'rate') updateLineTotalCell(r);
+          if (col === 'qty') updateLineTotalCell(r);
         });
       }
+    });
+
+    document.querySelectorAll('.grn-vendor-select').forEach(sel => {
+      wireVendorSelect(sel);
+      sel.addEventListener('change', () => {
+        if (sel.value !== '__new__') grnRows[+sel.dataset.row].vendor = sel.value;
+      });
     });
 
     document.querySelectorAll('.grn-row-remove').forEach(btn => {
@@ -752,6 +934,10 @@
     grnRows[r].rate = product.purchase_rate || '';
     grnRows[r].mrp = product.price || '';
     grnRows[r].vendor = product.vendor || '';
+    grnRows[r].margin = '';
+    if (product.purchase_rate && product.price) {
+      recalcPricing(grnRows[r], 'rate');
+    }
     renderExcelGrid();
     setTimeout(() => document.querySelector(`.grn-input[data-row="${r}"][data-col="qty"]`)?.focus(), 20);
   }
@@ -799,14 +985,20 @@
   // Grid-wide ↑ / ↓ arrow navigation between rows, same column
   function wireGridKeyboardNav() {
     document.getElementById('grn-grid-body').addEventListener('keydown', (e) => {
-      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+      const isNav = e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter';
+      if (!isNav) return;
       const active = document.activeElement;
       if (!active || !active.classList.contains('grn-input') || active.classList.contains('product-search')) return;
+      // Enter on a select while its own dropdown might be interacting — still fine to move on.
       const r = +active.dataset.row;
       const col = active.dataset.col;
-      const targetRow = e.key === 'ArrowDown' ? r + 1 : r - 1;
+      const targetRow = e.key === 'ArrowUp' ? r - 1 : r + 1; // Enter behaves like ArrowDown (Excel convention)
       const target = document.querySelector(`.grn-input[data-row="${targetRow}"][data-col="${col}"]`);
-      if (target) { e.preventDefault(); target.focus(); target.select && target.select(); }
+      if (target) {
+        e.preventDefault();
+        target.focus();
+        target.select && target.select();
+      }
     });
   }
 
@@ -994,22 +1186,42 @@
     }
     grnHistoryAll = data || [];
 
-    const vendors = [...new Set(grnHistoryAll.map(g => g.supplier_name).filter(Boolean))];
+    const vendorNames = [...new Set(grnHistoryAll.map(g => (g.supplier_name || '').trim()).filter(Boolean))];
     const vendorSelect = document.getElementById('rf-vendor');
-    vendorSelect.innerHTML = '<option value="">All vendors</option>' + vendors.map(v => `<option value="${v}">${v}</option>`).join('');
+    vendorSelect.innerHTML = '';
+    const allOpt = document.createElement('option');
+    allOpt.value = ''; allOpt.textContent = 'All vendors';
+    vendorSelect.appendChild(allOpt);
+    vendorNames.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v; opt.textContent = v;
+      vendorSelect.appendChild(opt);
+    });
 
     applyHistoryFilter();
+  }
+
+  // Local YYYY-MM-DD string for a timestamp, so date filtering compares
+  // calendar days directly instead of Date objects (which can drift a
+  // day off near midnight depending on timezone — the earlier version
+  // of this filter had exactly that bug).
+  function localDateStr(d) {
+    const dt = new Date(d);
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth() + 1).padStart(2, '0');
+    const day = String(dt.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
   }
 
   function applyHistoryFilter() {
     const from = document.getElementById('rf-from').value;
     const to = document.getElementById('rf-to').value;
-    const vendor = document.getElementById('rf-vendor').value;
+    const vendor = (document.getElementById('rf-vendor').value || '').trim().toLowerCase();
 
     let filtered = grnHistoryAll;
-    if (from) filtered = filtered.filter(g => new Date(g.created_at) >= new Date(from));
-    if (to) filtered = filtered.filter(g => new Date(g.created_at) <= new Date(to + 'T23:59:59'));
-    if (vendor) filtered = filtered.filter(g => g.supplier_name === vendor);
+    if (from) filtered = filtered.filter(g => localDateStr(g.created_at) >= from);
+    if (to) filtered = filtered.filter(g => localDateStr(g.created_at) <= to);
+    if (vendor) filtered = filtered.filter(g => (g.supplier_name || '').trim().toLowerCase() === vendor);
 
     renderGrnHistory(filtered);
   }
