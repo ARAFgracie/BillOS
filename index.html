@@ -188,6 +188,7 @@
   <div class="tabs">
     <div class="tab active" id="tab-login">Login</div>
     <div class="tab" id="tab-signup">Try Demo</div>
+    <div class="tab" id="tab-career">Career</div>
   </div>
 
   <!-- LOGIN CARD -->
@@ -219,6 +220,20 @@
     <a href="demo.html" class="btn" style="display:block; text-align:center; text-decoration:none; margin-top:16px;">View Live Preview →</a>
   </div>
 
+  <!-- CAREER CARD — BillOS company staff only, not shop accounts -->
+  <div class="card hidden" id="career-card">
+    <h2>BillOS Careers</h2>
+    <p class="sub">For BillOS company staff only — not for shop owners or shop staff.</p>
+    <form id="career-form">
+      <label for="career-email">Company Email</label>
+      <input type="email" id="career-email" placeholder="you@billos.app" required>
+      <label for="career-password">Password</label>
+      <input type="password" id="career-password" placeholder="••••••••" required>
+      <button type="submit" class="btn" id="career-btn">Company Log In</button>
+    </form>
+    <div class="msg" id="career-msg"></div>
+  </div>
+
   <div class="role-note">Only Owners and Authority can add Sales Executive accounts after login.</div>
 </div>
 
@@ -229,30 +244,34 @@
   const { createClient } = supabase;
   const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  // If already logged in, skip the login form and go straight to the dashboard.
+  // If already logged in, skip the login form — platform admins go to
+  // the company dashboard, everyone else goes to their shop dashboard.
   (async () => {
     const { data: { session } } = await sb.auth.getSession();
-    if (session) window.location.href = 'dashboard.html';
+    if (!session) return;
+    const { data: adminRow } = await sb.from('platform_admins').select('id').eq('id', session.user.id).maybeSingle();
+    window.location.href = adminRow ? 'career.html' : 'dashboard.html';
   })();
 
   // ---- Tab switching ----
   const tabLogin = document.getElementById('tab-login');
   const tabSignup = document.getElementById('tab-signup');
+  const tabCareer = document.getElementById('tab-career');
   const loginCard = document.getElementById('login-card');
   const signupCard = document.getElementById('signup-card');
+  const careerCard = document.getElementById('career-card');
 
-  tabLogin.onclick = () => {
-    tabLogin.classList.add('active');
-    tabSignup.classList.remove('active');
-    loginCard.classList.remove('hidden');
-    signupCard.classList.add('hidden');
-  };
-  tabSignup.onclick = () => {
-    tabSignup.classList.add('active');
-    tabLogin.classList.remove('active');
-    signupCard.classList.remove('hidden');
-    loginCard.classList.add('hidden');
-  };
+  function showTab(tab) {
+    [tabLogin, tabSignup, tabCareer].forEach(t => t.classList.remove('active'));
+    [loginCard, signupCard, careerCard].forEach(c => c.classList.add('hidden'));
+    if (tab === 'login') { tabLogin.classList.add('active'); loginCard.classList.remove('hidden'); }
+    else if (tab === 'signup') { tabSignup.classList.add('active'); signupCard.classList.remove('hidden'); }
+    else { tabCareer.classList.add('active'); careerCard.classList.remove('hidden'); }
+  }
+
+  tabLogin.onclick = () => showTab('login');
+  tabSignup.onclick = () => showTab('signup');
+  tabCareer.onclick = () => showTab('career');
 
   function showMsg(el, text, type){
     el.textContent = text;
@@ -279,6 +298,40 @@
     }
     showMsg(msg, 'Logged in! Redirecting...', 'success');
     setTimeout(() => { window.location.href = 'dashboard.html'; }, 700);
+  });
+
+  // ---- Career login — same Supabase auth, but only proceeds if the
+  // account is listed in platform_admins. Anyone can try this tab with
+  // any email; only accounts actually granted admin access get in. ----
+  document.getElementById('career-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('career-btn');
+    const msg = document.getElementById('career-msg');
+    btn.disabled = true; btn.textContent = 'Checking...';
+
+    const email = document.getElementById('career-email').value;
+    const password = document.getElementById('career-password').value;
+
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      btn.disabled = false; btn.textContent = 'Company Log In';
+      showMsg(msg, error.message.includes('Invalid') ? 'Wrong email or password.' : error.message, 'error');
+      return;
+    }
+
+    const { data: adminRow } = await sb.from('platform_admins').select('id, role').eq('id', data.user.id).maybeSingle();
+
+    if (!adminRow) {
+      await sb.auth.signOut(); // don't leave an unauthorized session sitting around
+      btn.disabled = false; btn.textContent = 'Company Log In';
+      showMsg(msg, 'This account is not authorized for Career Mode.', 'error');
+      return;
+    }
+
+    btn.disabled = false; btn.textContent = 'Company Log In';
+    showMsg(msg, 'Welcome back — redirecting...', 'success');
+    setTimeout(() => { window.location.href = 'career.html'; }, 700);
   });
 </script>
 
